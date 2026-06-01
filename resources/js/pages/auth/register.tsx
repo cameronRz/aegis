@@ -50,7 +50,6 @@ export default function Register({ passwordRules }: Props) {
                                     id="last_name"
                                     type="text"
                                     required
-                                    autoFocus
                                     tabIndex={2}
                                     autoComplete="given-name"
                                     name="last_name"
