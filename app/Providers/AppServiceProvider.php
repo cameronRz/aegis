@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
-        Gate::define('admin', fn (User $user) => in_array($user->role, [Role::SiteAdmin->value, Role::Admin->value]));
+        Gate::define('admin', fn (User $user) => in_array($user->role, [Role::SiteAdmin, Role::Admin], true));
     }
 
     /**
