@@ -36,7 +36,7 @@ class UserController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('admin/users/index', [
+        return Inertia::render('users/index', [
             'users' => $users,
             'filters' => $request->only('search'),
         ]);
@@ -52,7 +52,7 @@ class UserController extends Controller
         $canManagePermissions = $viewer->id !== $user->id
             && ($viewer->role === Role::SiteAdmin || ($viewer->role === Role::Admin && ! in_array($user->role, [Role::SiteAdmin, Role::Admin], true)));
 
-        return Inertia::render('admin/users/show', [
+        return Inertia::render('users/show', [
             'user' => $user,
             'allPermissions' => $allPermissions,
             'canManagePermissions' => $canManagePermissions,
