@@ -30,20 +30,24 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
+const ALL_NAV_ITEMS: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Users',
+        href: adminUsersRoute.url(),
+        icon: Users,
+        permission: 'view_users',
+    },
+];
+
 export function AppSidebar() {
     const { auth } = usePage().props;
-    const role = auth.user.role;
 
-    const mainNavItems: NavItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-        ...(role === 'site_admin' || role === 'admin'
-            ? [{ title: 'Users', href: adminUsersRoute.url(), icon: Users }]
-            : []),
-    ];
+    const mainNavItems = ALL_NAV_ITEMS.filter((item) => !item.permission || auth.can[item.permission]);
 
     return (
         <Sidebar collapsible="icon" variant="inset">

@@ -28,7 +28,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        Gate::before(function (User $user, string $ability) {
+            if (in_array($user->role, [Role::SiteAdmin, Role::Admin], true)) {
+                return true;
+            }
+
+            return null;
+        });
+
         Gate::define('admin', fn (User $user) => in_array($user->role, [Role::SiteAdmin, Role::Admin], true));
+        Gate::define('view_users', fn (User $user) => $user->hasPermission('view_users'));
     }
 
     /**

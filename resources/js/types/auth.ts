@@ -1,5 +1,14 @@
 export type Role = 'site_admin' | 'admin' | 'manager' | 'user';
 
+export type Permission = {
+    id: number;
+    name: string;
+    display_name: string;
+    description: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
 export type User = {
     id: number;
     first_name: string;
@@ -10,13 +19,20 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    permissions?: Permission[];
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
 };
 
+export type Can = {
+    view_users: boolean;
+    [key: string]: boolean;
+};
+
 export type Auth = {
     user: User;
+    can: Can;
 };
 
 /* @chisel-passkeys */

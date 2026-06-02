@@ -21,6 +21,10 @@ import {
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { PaginatedData, Role, User } from '@/types';
 
+function goToUser(user: User) {
+    router.visit(adminUsersRoute.show(user.id).url);
+}
+
 type Props = {
     users: PaginatedData<User>;
     filters: { search?: string };
@@ -122,7 +126,11 @@ export default function UsersIndex({ users, filters }: Props) {
                         <TableBody>
                             {table.getRowModel().rows.length ? (
                                 table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id}>
+                                    <TableRow
+                                        key={row.id}
+                                        className="cursor-pointer"
+                                        onClick={() => goToUser(row.original)}
+                                    >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
                                                 {flexRender(

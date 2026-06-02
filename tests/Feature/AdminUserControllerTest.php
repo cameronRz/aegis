@@ -7,6 +7,8 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 beforeEach(function () {
+    $this->withoutVite();
+
     $this->admin = User::factory()->create(['role' => Role::Admin]);
     $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
 });
@@ -72,6 +74,23 @@ it('searches by email', function () {
         ->get('/admin/users?search=unique@example.com')
         ->assertInertia(
             fn ($page) => $page->has('users.data', 1)
+        );
+});
+
+it('hides site_admin and admin users from managers', function () {
+    $permission = \App\Models\Permission::create([
+        'name' => 'view_users',
+        'display_name' => 'View Users',
+        'description' => 'Access the users list.',
+    ]);
+    $manager = User::factory()->create(['role' => Role::Manager]);
+    $manager->permissions()->attach($permission->id, ['granted_by' => $this->admin->id]);
+    User::factory(2)->create(['role' => Role::User]);
+
+    actingAs($manager)
+        ->get('/admin/users')
+        ->assertInertia(
+            fn ($page) => $page->has('users.data', 3) // manager + 2 users, site_admin and admin excluded
         );
 });
 

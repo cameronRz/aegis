@@ -35,5 +35,7 @@ class DatabaseSeeder extends Seeder
         User::factory(5)->create(['role' => Role::Admin]);
         User::factory(20)->create(['role' => Role::Manager]);
         User::factory(100)->create();
+
+        $this->call(PermissionSeeder::class);
     }
 }
