@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Enum\Role;
-use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\Request;
