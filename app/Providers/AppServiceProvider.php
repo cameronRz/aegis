@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('admin', fn (User $user) => in_array($user->role, [Role::SiteAdmin, Role::Admin], true));
         Gate::define('view_users', fn (User $user) => $user->hasPermission('view_users'));
+        Gate::define('create_user', fn (User $user) => $user->hasPermission('create_user'));
     }
 
     /**

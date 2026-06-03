@@ -19,8 +19,9 @@ metadata:
 ### Admin pages (`users/`)
 | File | Description |
 |---|---|
-| `users/index.tsx` | User list with search, pagination (15/page), role badges |
+| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user` |
 | `users/show.tsx` | User detail with role badge and permission toggle controls |
+| `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -89,7 +90,7 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; [key: string]: boolean };  // gates shared via Inertia
+type Can = { view_users: boolean; create_user: boolean; [key: string]: boolean };  // gates shared via Inertia
 
 type Auth = { user: User; can: Can };
 

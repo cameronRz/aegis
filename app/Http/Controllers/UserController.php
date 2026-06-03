@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enum\Role;
+use App\Http\Requests\StoreUserRequest;
 use App\Models\Permission;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -39,6 +43,50 @@ class UserController extends Controller
             'users' => $users,
             'filters' => $request->only('search'),
         ]);
+    }
+
+    public function create(Request $request): Response
+    {
+        $viewer = $request->user();
+        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
+
+        $availableRoles = $viewer->role === Role::SiteAdmin
+            ? array_column(Role::cases(), 'value')
+            : [Role::Manager->value, Role::User->value];
+
+        return Inertia::render('users/create', [
+            'availableRoles' => $availableRoles,
+            'allPermissions' => $isAdmin ? Permission::all() : [],
+            'canAssignPermissions' => $isAdmin,
+        ]);
+    }
+
+    public function store(StoreUserRequest $request): RedirectResponse
+    {
+        $viewer = $request->user();
+        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
+
+        $user = User::create([
+            'first_name' => $request->validated('first_name'),
+            'last_name' => $request->validated('last_name'),
+            'email' => $request->validated('email'),
+            'password' => Str::random(64),
+        ]);
+
+        $user->role = Role::from($request->validated('role'));
+        $user->email_verified_at = now();
+        $user->save();
+
+        if ($isAdmin && $request->filled('permissions')) {
+            $pivot = collect($request->validated('permissions'))
+                ->mapWithKeys(fn (int $id) => [$id => ['granted_by' => $viewer->id]]);
+
+            $user->permissions()->attach($pivot);
+        }
+
+        Password::broker()->sendResetLink(['email' => $user->email]);
+
+        return redirect()->route('admin.users.show', $user);
     }
 
     public function show(Request $request, User $user): Response

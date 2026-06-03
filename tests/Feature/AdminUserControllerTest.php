@@ -1,6 +1,7 @@
 <?php
 
 use App\Enum\Role;
+use App\Models\Permission;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -30,7 +31,7 @@ it('returns users for an admin', function () {
         ->get('/admin/users')
         ->assertInertia(
             fn ($page) => $page
-                ->component('admin/users/index')
+                ->component('users/index')
                 ->has('users.data', 3 + 1) // 3 customers + the admin itself
         );
 });
@@ -78,7 +79,7 @@ it('searches by email', function () {
 });
 
 it('hides site_admin and admin users from managers', function () {
-    $permission = \App\Models\Permission::create([
+    $permission = Permission::create([
         'name' => 'view_users',
         'display_name' => 'View Users',
         'description' => 'Access the users list.',

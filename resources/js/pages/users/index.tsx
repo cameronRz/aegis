@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     createColumnHelper,
     flexRender,
@@ -19,7 +19,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { users as adminUsersRoute } from '@/routes/admin';
-import type { PaginatedData, Role, User } from '@/types';
+import type { Auth, PaginatedData, Role, User } from '@/types';
 
 function goToUser(user: User) {
     router.visit(adminUsersRoute.show(user.id).url);
@@ -58,7 +58,10 @@ const columns = [
     }),
 ];
 
+type PageProps = { auth: Auth };
+
 export default function UsersIndex({ users, filters }: Props) {
+    const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const isFirstRender = useRef(true);
 
@@ -100,12 +103,19 @@ export default function UsersIndex({ users, filters }: Props) {
         <>
             <Head title="Users" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <Input
-                    placeholder="Search by name or email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="max-w-sm"
-                />
+                <div className="flex items-center justify-between gap-4">
+                    <Input
+                        placeholder="Search by name or email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="max-w-sm"
+                    />
+                    {auth.can.create_user && (
+                        <Button asChild>
+                            <Link href={adminUsersRoute.create.url()}>Create User</Link>
+                        </Button>
+                    )}
+                </div>
 
                 <div className="rounded-md border">
                     <Table>

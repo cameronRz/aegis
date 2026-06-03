@@ -15,6 +15,11 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'View Users',
                 'description' => 'Access the users list and view user details.',
             ],
+            [
+                'name' => 'create_user',
+                'display_name' => 'Create Users',
+                'description' => 'Create new user accounts (managers and users only).',
+            ],
         ];
 
         foreach ($permissions as $permission) {

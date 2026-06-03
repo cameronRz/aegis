@@ -51,7 +51,7 @@ it('returns user and permissions data on show', function () {
         ->get("/admin/users/{$target->id}")
         ->assertInertia(
             fn ($page) => $page
-                ->component('admin/users/show')
+                ->component('users/show')
                 ->has('user')
                 ->has('allPermissions', 1)
                 ->where('canManagePermissions', true)

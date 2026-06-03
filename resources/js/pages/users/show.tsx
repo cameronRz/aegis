@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { toggle as togglePermission } from '@/actions/App/Http/Controllers/Admin/UserPermissionController';
+import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Permission, Role, User } from '@/types';
 

@@ -12,6 +12,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('can:view_users')->group(function () {
             Route::get('users', [UserController::class, 'index'])->name('users');
+        });
+
+        Route::middleware('can:create_user')->group(function () {
+            Route::get('users/create', [UserController::class, 'create'])->name('users.create');
+            Route::post('users', [UserController::class, 'store'])->name('users.store');
+        });
+
+        Route::middleware('can:view_users')->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });
 

@@ -36,6 +36,8 @@ The central model. Represents both admin-side staff and (eventually) client-side
 **Key methods:**
 - `hasPermission(string $permission): bool` — returns `true` if user has the named permission. Site admins and admins bypass this check via the `admin` gate.
 
+**Fillable:** `first_name`, `last_name`, `email`, `password` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
+
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `TwoFactorAuthenticatable`
 
 ---
@@ -86,6 +88,7 @@ site_admin > admin > manager > user
 ### Gates (defined in `AppServiceProvider`)
 - `admin` — passes for `site_admin` and `admin` roles
 - `view_users` — calls `User::hasPermission('view_users')`
+- `create_user` — calls `User::hasPermission('create_user')`
 - **Before gate:** site_admin and admin automatically pass all gates (short-circuit)
 
 ### How permissions work in practice
