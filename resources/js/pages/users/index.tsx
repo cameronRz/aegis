@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useRef, useState } from 'react';
 
+import { create as createUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ import { users as adminUsersRoute } from '@/routes/admin';
 import type { Auth, PaginatedData, Role, User } from '@/types';
 
 function goToUser(user: User) {
-    router.visit(adminUsersRoute.show(user.id).url);
+    router.visit(showUser(user).url);
 }
 
 type Props = {
@@ -68,6 +69,7 @@ export default function UsersIndex({ users, filters }: Props) {
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
+
             return;
         }
 
@@ -90,6 +92,7 @@ export default function UsersIndex({ users, filters }: Props) {
     });
 
     function goToPage(url: string | null) {
+        // eslint-disable-next-line
         if (!url) return;
 
         router.get(url, {}, { preserveState: true });
@@ -112,7 +115,7 @@ export default function UsersIndex({ users, filters }: Props) {
                     />
                     {auth.can.create_user && (
                         <Button asChild>
-                            <Link href={adminUsersRoute.create.url()}>Create User</Link>
+                            <Link href={createUser.url()}>Create User</Link>
                         </Button>
                     )}
                 </div>

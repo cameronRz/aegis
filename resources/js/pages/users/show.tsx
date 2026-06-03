@@ -1,15 +1,15 @@
 import { Head, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 
+import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
-import { resolveToggle } from './permission-dependencies';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Permission, Role, User } from '@/types';
+import { resolveToggle } from './permission-dependencies';
 
 type Props = {
     user: User & { permissions: Permission[] };
