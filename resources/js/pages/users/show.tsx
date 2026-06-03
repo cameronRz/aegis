@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
+import { resolveToggle } from './permission-dependencies';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Permission, Role, User } from '@/types';
 
@@ -32,12 +34,30 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
     const grantedIds = new Set(user.permissions.map((p) => p.id));
     const isPrivileged = privilegedRoles.includes(user.role);
 
-    function handleToggle(permission: Permission) {
+    function fireToggle(permission: Permission, onSuccess?: () => void) {
         router.post(
             togglePermission({ user: user.id, permission: permission.id }).url,
             {},
-            { preserveScroll: true },
+            { preserveScroll: true, onSuccess },
         );
+    }
+
+    function handleToggle(permission: Permission) {
+        const { toGrant, toRevoke } = resolveToggle(
+            permission,
+            grantedIds.has(permission.id),
+            allPermissions,
+            grantedIds,
+        );
+        const sequence = [...toRevoke, ...toGrant];
+        const fire = (index: number) => {
+            if (index >= sequence.length) {
+                toast('Permission updated');
+                return;
+            }
+            fireToggle(sequence[index], () => fire(index + 1));
+        };
+        fire(0);
     }
 
     return (

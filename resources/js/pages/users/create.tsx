@@ -17,6 +17,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Permission, Role } from '@/types';
+import { resolveToggle } from './permission-dependencies';
 
 type Props = {
     availableRoles: Role[];
@@ -43,12 +44,18 @@ export default function UserCreate({ availableRoles, allPermissions, canAssignPe
     });
 
     function togglePermission(id: number) {
-        setData(
-            'permissions',
-            data.permissions.includes(id)
-                ? data.permissions.filter((p) => p !== id)
-                : [...data.permissions, id],
+        const permission = allPermissions.find((p) => p.id === id)!;
+        const grantedIds = new Set(data.permissions);
+        const { toGrant, toRevoke } = resolveToggle(
+            permission,
+            grantedIds.has(id),
+            allPermissions,
+            grantedIds,
         );
+        const updated = data.permissions
+            .filter((p) => !toRevoke.some((r) => r.id === p))
+            .concat(toGrant.map((p) => p.id));
+        setData('permissions', updated);
     }
 
     return (
