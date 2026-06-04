@@ -108,9 +108,53 @@ type PaginatedData<T> = { data: T[]; current_page, last_page, total, links, ... 
 
 ---
 
+## Confirmation Dialogs
+
+There is **no `AlertDialog`** component in this UI library. Do not try to add or import one. The established pattern for all destructive confirmations is `Dialog` + `Alert variant="destructive"` inside the content.
+
+**Pattern — subtle trigger + Dialog confirmation:**
+```tsx
+// Trigger: subtle text link, not a Button
+<button
+    onClick={() => setOpen(true)}
+    className="text-muted-foreground hover:text-destructive text-sm transition-colors"
+>
+    Delete something
+</button>
+
+// Dialog: DialogContent must include aria-describedby={undefined} when using
+// Alert instead of DialogDescription — Radix requires one or the other, and
+// omitting both causes a console warning.
+<Dialog open={open} onOpenChange={setOpen}>
+    <DialogContent aria-describedby={undefined}>
+        <DialogTitle>Delete something</DialogTitle>
+        <Alert variant="destructive">
+            <AlertTitle>Are you sure?</AlertTitle>
+            <AlertDescription>
+                This action is permanent and cannot be undone.
+            </AlertDescription>
+        </Alert>
+        <DialogFooter>
+            <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" disabled={processing} onClick={handleDelete}>
+                Delete
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+```
+
+**`aria-describedby={undefined}` rule:** Radix UI's `DialogContent` always expects either a `DialogDescription` child or an explicit `aria-describedby={undefined}` prop. When the `Alert` is serving as the description, pass `aria-describedby={undefined}` to suppress the warning. Only use `DialogDescription` when there is no other self-describing content in the dialog.
+
+---
+
 ## Wayfinder URL Patterns
 
 Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
+
+**Regenerating Wayfinder:** Always run `php artisan wayfinder:generate --with-form`. The `--with-form` flag is required because `vite.config.ts` sets `formVariants: true`. Omitting it strips `.form()` from every action file, breaking any page that uses the Inertia `<Form>` component (login, register, settings, etc.).
 
 **No-arg actions** (e.g. `store`, `create`, `index`): the action is not called first; `.url()` is a method on the function itself.
 ```ts
