@@ -17,7 +17,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Permission, Role, User } from '@/types';
-import { resolveToggle } from './permission-dependencies';
+import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
 
 type Props = {
     user: User & { permissions: Permission[] };
@@ -44,9 +44,10 @@ export default function UserEdit({ user, availableRoles, allPermissions, canAssi
         permissions: user.permissions.map((p) => p.id),
     });
 
+    const grantedIds = new Set(data.permissions);
+
     function togglePermission(id: number) {
         const permission = allPermissions.find((p) => p.id === id)!;
-        const grantedIds = new Set(data.permissions);
         const { toGrant, toRevoke } = resolveToggle(
             permission,
             grantedIds.has(id),
@@ -178,6 +179,7 @@ export default function UserEdit({ user, availableRoles, allPermissions, canAssi
                                                 <Checkbox
                                                     id={`permission-${permission.id}`}
                                                     checked={data.permissions.includes(permission.id)}
+                                                    disabled={isPermissionDisabled(permission, allPermissions, grantedIds)}
                                                     onCheckedChange={() =>
                                                         togglePermission(permission.id)
                                                     }

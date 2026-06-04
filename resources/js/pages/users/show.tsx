@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Auth, Permission, Role, User } from '@/types';
-import { resolveToggle } from './permission-dependencies';
+import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
 
 type Props = {
     user: User & { permissions: Permission[] };
@@ -132,7 +132,7 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                                             <Checkbox
                                                 id={`permission-${permission.id}`}
                                                 checked={grantedIds.has(permission.id)}
-                                                disabled={!canManagePermissions}
+                                                disabled={!canManagePermissions || isPermissionDisabled(permission, allPermissions, grantedIds)}
                                                 onCheckedChange={() => handleToggle(permission)}
                                             />
                                         </div>

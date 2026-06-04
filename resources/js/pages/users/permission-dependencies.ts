@@ -2,6 +2,8 @@ import type { Permission } from '@/types';
 
 const dependencies: Record<string, string[]> = {
     create_user: ['view_users'],
+    edit_user: ['view_users'],
+    delete_user: ['view_users'],
 };
 
 export function resolveToggle(
@@ -23,4 +25,15 @@ export function resolveToggle(
 
         return { toGrant: [...required, permission], toRevoke: [] };
     }
+}
+
+export function isPermissionDisabled(
+    permission: Permission,
+    allPermissions: Permission[],
+    grantedIds: Set<number>,
+): boolean {
+    return (dependencies[permission.name] ?? []).some((depName) => {
+        const dep = allPermissions.find((p) => p.name === depName);
+        return dep !== undefined && !grantedIds.has(dep.id);
+    });
 }
