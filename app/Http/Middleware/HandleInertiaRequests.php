@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
                     'view_users' => Gate::allows('view_users'),
                     'create_user' => Gate::allows('create_user'),
                     'edit_user' => Gate::allows('edit_user'),
+                    'delete_user' => Gate::allows('delete_user'),
                 ] : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

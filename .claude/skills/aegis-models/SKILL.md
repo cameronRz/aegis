@@ -90,6 +90,7 @@ site_admin > admin > manager > user
 - `view_users` — calls `User::hasPermission('view_users')`
 - `create_user` — calls `User::hasPermission('create_user')`
 - `edit_user` — calls `User::hasPermission('edit_user')`
+- `delete_user` — calls `User::hasPermission('delete_user')`
 - **Before gate:** site_admin and admin automatically pass all gates (short-circuit)
 
 ### How permissions work in practice

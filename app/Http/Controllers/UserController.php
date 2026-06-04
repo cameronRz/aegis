@@ -144,6 +144,17 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $user);
     }
 
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        if ($request->user()->id === $user->id) {
+            abort(403);
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.users');
+    }
+
     public function show(Request $request, User $user): Response
     {
         $user->load('permissions');

@@ -24,6 +24,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         });
 
+        Route::middleware('can:delete_user')->group(function () {
+            Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        });
+
         Route::middleware('can:view_users')->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });

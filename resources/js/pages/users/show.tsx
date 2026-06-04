@@ -1,12 +1,21 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { edit as editUser } from '@/actions/App/Http/Controllers/UserController';
+import { destroy as destroyUser, edit as editUser } from '@/actions/App/Http/Controllers/UserController';
 import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
@@ -36,11 +45,19 @@ type PageProps = { auth: Auth };
 export default function UserShow({ user, allPermissions, canManagePermissions }: Props) {
     const { auth } = usePage<PageProps>().props;
     const { label, variant } = roleConfig[user.role];
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const canEditUser =
         auth.can.edit_user &&
         auth.user.id !== user.id &&
         (auth.user.role === 'site_admin' || !privilegedRoles.includes(user.role));
+
+    const canDeleteUser =
+        auth.can.delete_user &&
+        auth.user.id !== user.id &&
+        (auth.user.role === 'site_admin' || !privilegedRoles.includes(user.role));
+
     const grantedIds = new Set(user.permissions.map((p) => p.id));
     const isPrivileged = privilegedRoles.includes(user.role);
 
@@ -63,11 +80,21 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
         const fire = (index: number) => {
             if (index >= sequence.length) {
                 toast('Permission updated');
+
                 return;
             }
+
             fireToggle(sequence[index], () => fire(index + 1));
         };
         fire(0);
+    }
+
+    function handleDelete() {
+        setDeleting(true);
+        router.delete(destroyUser(user).url, {
+            onSuccess: () => setDeleteOpen(false),
+            onFinish: () => setDeleting(false),
+        });
     }
 
     return (
@@ -91,6 +118,16 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                             </div>
                         </div>
                     </CardHeader>
+                    {canDeleteUser && (
+                        <CardContent className="pt-0">
+                            <button
+                                onClick={() => setDeleteOpen(true)}
+                                className="text-muted-foreground hover:text-destructive text-sm transition-colors"
+                            >
+                                Delete user
+                            </button>
+                        </CardContent>
+                    )}
                 </Card>
 
                 <Card>
@@ -148,6 +185,27 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                     </CardContent>
                 </Card>
             </div>
+
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent aria-describedby={undefined}>
+                    <DialogTitle>Delete {user.full_name}</DialogTitle>
+                    <Alert variant="destructive">
+                        <AlertTitle>Are you sure?</AlertTitle>
+                        <AlertDescription>
+                            This will permanently delete {user.full_name}'s account and cannot be
+                            undone.
+                        </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+                            Delete user
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

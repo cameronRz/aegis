@@ -40,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view_users', fn (User $user) => $user->hasPermission('view_users'));
         Gate::define('create_user', fn (User $user) => $user->hasPermission('create_user'));
         Gate::define('edit_user', fn (User $user) => $user->hasPermission('edit_user'));
+        Gate::define('delete_user', fn (User $user) => $user->hasPermission('delete_user'));
     }
 
     /**

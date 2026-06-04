@@ -20,7 +20,7 @@ metadata:
 | File | Description |
 |---|---|
 | `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
-| `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header shown when `auth.can.edit_user` (hidden for self and privileged targets) |
+| `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
 | `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
 | `users/edit.tsx` | Edit user form: same fields/permission UI as create, pre-filled with existing user data; uses PATCH; self-editing blocked (403) |
 
@@ -92,7 +92,7 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; [key: string]: boolean };  // gates shared via Inertia
+type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; delete_user: boolean; [key: string]: boolean };  // gates shared via Inertia
 
 type Auth = { user: User; can: Can };
 
