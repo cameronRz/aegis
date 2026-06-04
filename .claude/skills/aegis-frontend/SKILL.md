@@ -19,9 +19,10 @@ metadata:
 ### Admin pages (`users/`)
 | File | Description |
 |---|---|
-| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user` |
-| `users/show.tsx` | User detail with role badge and permission toggle controls |
+| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
+| `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header shown when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
+| `users/edit.tsx` | Edit user form: same fields/permission UI as create, pre-filled with existing user data; uses PATCH; self-editing blocked (403) |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -44,6 +45,7 @@ metadata:
 **Page conventions:**
 - Each page sets a `.layout` property that passes breadcrumbs and titles to the app layout
 - Auth pages use `AuthLayout`; all other pages use `AppLayout`
+- Breadcrumbs are **always static arrays** on `.layout` — there is no function-based or dynamic breadcrumb pattern. Pages for specific entities (show, edit) use a static label (`'User Details'`, `'Edit User'`), not the entity's name. Do not reach for `setLayoutProps` for breadcrumbs; `setLayoutProps` is only used for auth layout props (`title`, `description`).
 
 ---
 
@@ -90,7 +92,7 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; create_user: boolean; [key: string]: boolean };  // gates shared via Inertia
+type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; [key: string]: boolean };  // gates shared via Inertia
 
 type Auth = { user: User; can: Can };
 
@@ -103,6 +105,40 @@ type PaginatedData<T> = { data: T[]; current_page, last_page, total, links, ... 
 ```
 
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Extend it as new gates are added.
+
+---
+
+## Wayfinder URL Patterns
+
+Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
+
+**No-arg actions** (e.g. `store`, `create`, `index`): the action is not called first; `.url()` is a method on the function itself.
+```ts
+import { store as storeUser } from '@/actions/App/Http/Controllers/UserController';
+post(storeUser.url());
+```
+
+**Parametric actions** (e.g. `show`, `edit`, `update`): call the function with args first; `.url` is a string property on the returned `RouteDefinition` object — do not invoke it as a function.
+```ts
+import { edit as editUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
+router.visit(showUser(user).url);       // ✓ string property
+router.visit(editUser(user).url);       // ✓ string property
+router.visit(editUser(user).url());     // ✗ TypeError — url is not a function
+```
+
+## Named Routes (`@/routes/admin`)
+
+`users` is the **only named export**. Sub-routes (`show`, `edit`, `create`, `store`, `update`, `permissions`) are properties attached to the `users` function — they are not separate named exports.
+
+```ts
+import { users as adminUsersRoute } from '@/routes/admin';
+
+adminUsersRoute.url()               // GET /admin/users
+adminUsersRoute.show(user).url      // GET /admin/users/{user}
+adminUsersRoute.edit(user).url      // GET /admin/users/{user}/edit
+```
+
+Destructuring `show` or `edit` directly from `@/routes/admin` yields `undefined`.
 
 ---
 

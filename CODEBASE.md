@@ -53,5 +53,5 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 - **Named routes always** — use `route('name')` in PHP, Wayfinder functions in TypeScript
 - **Breadcrumbs on every page** — set via `.layout` property on Inertia page components
 - **Pagination** — use `PaginatedData<T>` type for paginated responses; 15 per page standard
-- **Permissions as strings** — permission names are slugs (e.g. `view_users`); add gates in `AppServiceProvider` and a corresponding `permissions` row
+- **Permissions as strings** — permission names are slugs (e.g. `view_users`, `edit_user`); add gates in `AppServiceProvider` and a corresponding `permissions` row in `PermissionSeeder`
 - **Pivot audit trail** — `granted_by` on `user_permissions` tracks who granted each permission; follow this pattern for future auditable pivots

@@ -19,6 +19,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('users', [UserController::class, 'store'])->name('users.store');
         });
 
+        Route::middleware('can:edit_user')->group(function () {
+            Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+            Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+        });
+
         Route::middleware('can:view_users')->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });

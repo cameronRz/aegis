@@ -1,14 +1,16 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 
+import { edit as editUser } from '@/actions/App/Http/Controllers/UserController';
 import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
-import type { Permission, Role, User } from '@/types';
+import type { Auth, Permission, Role, User } from '@/types';
 import { resolveToggle } from './permission-dependencies';
 
 type Props = {
@@ -29,8 +31,16 @@ const roleConfig: Record<
 
 const privilegedRoles: Role[] = ['site_admin', 'admin'];
 
+type PageProps = { auth: Auth };
+
 export default function UserShow({ user, allPermissions, canManagePermissions }: Props) {
+    const { auth } = usePage<PageProps>().props;
     const { label, variant } = roleConfig[user.role];
+
+    const canEditUser =
+        auth.can.edit_user &&
+        auth.user.id !== user.id &&
+        (auth.user.role === 'site_admin' || !privilegedRoles.includes(user.role));
     const grantedIds = new Set(user.permissions.map((p) => p.id));
     const isPrivileged = privilegedRoles.includes(user.role);
 
@@ -71,7 +81,14 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                                 <CardTitle className="text-xl">{user.full_name}</CardTitle>
                                 <CardDescription>{user.email}</CardDescription>
                             </div>
-                            <Badge variant={variant}>{label}</Badge>
+                            <div className="flex items-center gap-3">
+                                <Badge variant={variant}>{label}</Badge>
+                                {canEditUser && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={editUser(user).url}>Edit</Link>
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                 </Card>

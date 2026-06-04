@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enum\Role;
 use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -85,6 +86,60 @@ class UserController extends Controller
         }
 
         Password::broker()->sendResetLink(['email' => $user->email]);
+
+        return redirect()->route('admin.users.show', $user);
+    }
+
+    public function edit(Request $request, User $user): Response
+    {
+        if ($request->user()->id === $user->id) {
+            abort(403);
+        }
+
+        $user->load('permissions');
+
+        $viewer = $request->user();
+        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
+
+        $availableRoles = $viewer->role === Role::SiteAdmin
+            ? array_column(Role::cases(), 'value')
+            : [Role::Manager->value, Role::User->value];
+
+        return Inertia::render('users/edit', [
+            'user' => $user,
+            'availableRoles' => $availableRoles,
+            'allPermissions' => $isAdmin ? Permission::all() : [],
+            'canAssignPermissions' => $isAdmin,
+        ]);
+    }
+
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    {
+        if ($request->user()->id === $user->id) {
+            abort(403);
+        }
+
+        $viewer = $request->user();
+        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
+
+        $user->first_name = $request->validated('first_name');
+        $user->last_name = $request->validated('last_name');
+        $user->email = $request->validated('email');
+        $user->role = Role::from($request->validated('role'));
+        $user->save();
+
+        if ($isAdmin) {
+            $user->load('permissions');
+
+            $existingGrantedBy = $user->permissions->keyBy('id')->map(fn ($p) => $p->pivot->granted_by);
+
+            $pivot = collect($request->validated('permissions', []))
+                ->mapWithKeys(fn (int $id) => [
+                    $id => ['granted_by' => $existingGrantedBy->get($id, $viewer->id)],
+                ]);
+
+            $user->permissions()->sync($pivot);
+        }
 
         return redirect()->route('admin.users.show', $user);
     }

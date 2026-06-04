@@ -28,6 +28,7 @@ export type User = {
 export type Can = {
     view_users: boolean;
     create_user: boolean;
+    edit_user: boolean;
     [key: string]: boolean;
 };
 

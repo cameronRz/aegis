@@ -5,9 +5,9 @@ import {
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { create as createUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
+import { create as createUser, edit as editUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,8 @@ const roleConfig: Record<
     user: { label: 'User', variant: 'outline' },
 };
 
+const privilegedRoles: Role[] = ['site_admin', 'admin'];
+
 function RoleBadge({ role }: { role: Role }) {
     const { label, variant } = roleConfig[role];
 
@@ -49,22 +51,52 @@ function RoleBadge({ role }: { role: Role }) {
 
 const columnHelper = createColumnHelper<User>();
 
-const columns = [
-    columnHelper.accessor('first_name', { header: 'First Name' }),
-    columnHelper.accessor('last_name', { header: 'Last Name' }),
-    columnHelper.accessor('email', { header: 'Email' }),
-    columnHelper.accessor('role', {
-        header: 'Role',
-        cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
-    }),
-];
-
 type PageProps = { auth: Auth };
 
 export default function UsersIndex({ users, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const isFirstRender = useRef(true);
+
+    const canEditRow = (target: User) =>
+        auth.can.edit_user &&
+        auth.user.id !== target.id &&
+        (auth.user.role === 'site_admin' || !privilegedRoles.includes(target.role as Role));
+
+    const columns = useMemo(
+        () => [
+            columnHelper.accessor('first_name', { header: 'First Name' }),
+            columnHelper.accessor('last_name', { header: 'Last Name' }),
+            columnHelper.accessor('email', { header: 'Email' }),
+            columnHelper.accessor('role', {
+                header: 'Role',
+                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            }),
+            ...(auth.can.edit_user
+                ? [
+                      columnHelper.display({
+                          id: 'actions',
+                          header: '',
+                          cell: ({ row }) =>
+                              canEditRow(row.original) ? (
+                                  <div className="flex justify-end">
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          asChild
+                                          onClick={(e) => e.stopPropagation()}
+                                      >
+                                          <Link href={editUser(row.original).url}>Edit</Link>
+                                      </Button>
+                                  </div>
+                              ) : null,
+                      }),
+                  ]
+                : []),
+        ],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [auth.can.edit_user, auth.user.id, auth.user.role],
+    );
 
     useEffect(() => {
         if (isFirstRender.current) {

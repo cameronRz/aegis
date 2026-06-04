@@ -89,6 +89,7 @@ site_admin > admin > manager > user
 - `admin` — passes for `site_admin` and `admin` roles
 - `view_users` — calls `User::hasPermission('view_users')`
 - `create_user` — calls `User::hasPermission('create_user')`
+- `edit_user` — calls `User::hasPermission('edit_user')`
 - **Before gate:** site_admin and admin automatically pass all gates (short-circuit)
 
 ### How permissions work in practice
@@ -135,5 +136,9 @@ Actions (in `app/Actions/Fortify/`):
 Shared validation traits (in `app/Http/Requests/Concerns/`):
 - `PasswordValidationRules` — `passwordRules()` (required, confirmed, Password::default()), `currentPasswordRules()`
 - `ProfileValidationRules` — `profileRules(?int $userId)` for first/last name and unique email
+
+Form requests:
+- `StoreUserRequest` — validates new user creation; uses `profileRules()` + role + optional permissions
+- `UpdateUserRequest` — validates user edits; same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so the email uniqueness check ignores the current user
 
 Password rules differ by environment: production requires 12+ chars, mixed case, numbers, symbols, not compromised.
