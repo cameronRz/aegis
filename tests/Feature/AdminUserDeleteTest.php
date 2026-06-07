@@ -66,6 +66,24 @@ it('blocks self-deletion', function () {
     expect(User::find($this->admin->id))->not->toBeNull();
 });
 
+it('blocks an admin from deleting another admin', function () {
+    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+
+    actingAs($this->admin)
+        ->delete("/admin/users/{$anotherAdmin->id}")
+        ->assertForbidden();
+
+    expect(User::find($anotherAdmin->id))->not->toBeNull();
+});
+
+it('allows a site admin to delete another admin', function () {
+    actingAs($this->siteAdmin)
+        ->delete("/admin/users/{$this->admin->id}")
+        ->assertRedirect('/admin/users');
+
+    expect(User::find($this->admin->id))->toBeNull();
+});
+
 it('redirects to the users index after deletion', function () {
     actingAs($this->admin)
         ->delete("/admin/users/{$this->target->id}")

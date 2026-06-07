@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
+import { PRIVILEGED_ROLES } from '@/types';
 import type { Permission, Role } from '@/types';
 import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
 
@@ -31,8 +32,6 @@ const roleLabels: Record<Role, string> = {
     manager: 'Manager',
     user: 'User',
 };
-
-const privilegedRoles: Role[] = ['site_admin', 'admin'];
 
 export default function UserCreate({ availableRoles, allPermissions, canAssignPermissions }: Props) {
     const { data, setData, post, processing, errors } = useForm({
@@ -152,7 +151,7 @@ export default function UserCreate({ availableRoles, allPermissions, canAssignPe
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {privilegedRoles.includes(data.role) ? (
+                            {PRIVILEGED_ROLES.includes(data.role) ? (
                                 <p className="text-sm text-muted-foreground">
                                     Site admins and admins have all permissions by default.
                                     Individual permissions are not applicable.

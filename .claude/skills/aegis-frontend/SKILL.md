@@ -83,6 +83,8 @@ metadata:
 ```ts
 type Role = 'site_admin' | 'admin' | 'manager' | 'user';
 
+const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];  // import from @/types, never redefine locally
+
 type Permission = { id, name, display_name, description, created_at, updated_at };
 
 type User = {
@@ -92,7 +94,7 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; delete_user: boolean; [key: string]: boolean };  // gates shared via Inertia
+type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; delete_user: boolean; [key: string]: boolean };  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
 
 type Auth = { user: User; can: Can };
 
@@ -104,7 +106,10 @@ type Passkey = { id, name, authenticator, created_at_diff, last_used_at_diff };
 type PaginatedData<T> = { data: T[]; current_page, last_page, total, links, ... };
 ```
 
-`Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Extend it as new gates are added.
+`Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
+
+### Server-side authorization props (show pages)
+Per-model authorization decisions (can this viewer edit/delete THIS specific user?) are computed on the server and passed as Inertia props — never re-derived on the client. The `users/show` page receives `canEdit`, `canDelete`, `canManagePermissions` as boolean props. The `Can` type in `auth` only covers global capabilities (can the user edit users at all), not per-record ones.
 
 ---
 

@@ -9,6 +9,7 @@ use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -49,7 +50,6 @@ class UserController extends Controller
     public function create(Request $request): Response
     {
         $viewer = $request->user();
-        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
 
         $availableRoles = $viewer->role === Role::SiteAdmin
             ? array_column(Role::cases(), 'value')
@@ -57,15 +57,14 @@ class UserController extends Controller
 
         return Inertia::render('users/create', [
             'availableRoles' => $availableRoles,
-            'allPermissions' => $isAdmin ? Permission::all() : [],
-            'canAssignPermissions' => $isAdmin,
+            'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
+            'canAssignPermissions' => $viewer->isAdmin(),
         ]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
         $viewer = $request->user();
-        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
 
         $user = User::create([
             'first_name' => $request->validated('first_name'),
@@ -78,7 +77,7 @@ class UserController extends Controller
         $user->email_verified_at = now();
         $user->save();
 
-        if ($isAdmin && $request->filled('permissions')) {
+        if ($viewer->isAdmin() && $request->filled('permissions')) {
             $pivot = collect($request->validated('permissions'))
                 ->mapWithKeys(fn (int $id) => [$id => ['granted_by' => $viewer->id]]);
 
@@ -92,14 +91,11 @@ class UserController extends Controller
 
     public function edit(Request $request, User $user): Response
     {
-        if ($request->user()->id === $user->id) {
-            abort(403);
-        }
+        $this->authorize('update', $user);
 
         $user->load('permissions');
 
         $viewer = $request->user();
-        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
 
         $availableRoles = $viewer->role === Role::SiteAdmin
             ? array_column(Role::cases(), 'value')
@@ -108,19 +104,16 @@ class UserController extends Controller
         return Inertia::render('users/edit', [
             'user' => $user,
             'availableRoles' => $availableRoles,
-            'allPermissions' => $isAdmin ? Permission::all() : [],
-            'canAssignPermissions' => $isAdmin,
+            'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
+            'canAssignPermissions' => $viewer->isAdmin(),
         ]);
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        if ($request->user()->id === $user->id) {
-            abort(403);
-        }
+        $this->authorize('update', $user);
 
         $viewer = $request->user();
-        $isAdmin = in_array($viewer->role, [Role::SiteAdmin, Role::Admin], true);
 
         $user->first_name = $request->validated('first_name');
         $user->last_name = $request->validated('last_name');
@@ -128,7 +121,7 @@ class UserController extends Controller
         $user->role = Role::from($request->validated('role'));
         $user->save();
 
-        if ($isAdmin) {
+        if ($viewer->isAdmin()) {
             $user->load('permissions');
 
             $existingGrantedBy = $user->permissions->keyBy('id')->map(fn ($p) => $p->pivot->granted_by);
@@ -146,9 +139,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        if ($request->user()->id === $user->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $user);
 
         $user->delete();
 
@@ -159,16 +150,14 @@ class UserController extends Controller
     {
         $user->load('permissions');
 
-        $allPermissions = Permission::all();
-
         $viewer = $request->user();
-        $canManagePermissions = $viewer->id !== $user->id
-            && ($viewer->role === Role::SiteAdmin || ($viewer->role === Role::Admin && ! in_array($user->role, [Role::SiteAdmin, Role::Admin], true)));
 
         return Inertia::render('users/show', [
             'user' => $user,
-            'allPermissions' => $allPermissions,
-            'canManagePermissions' => $canManagePermissions,
+            'allPermissions' => Permission::all(),
+            'canEdit' => Gate::allows('edit_user') && $viewer->can('update', $user),
+            'canDelete' => Gate::allows('delete_user') && $viewer->can('delete', $user),
+            'canManagePermissions' => $viewer->can('managePermissions', $user),
         ]);
     }
 }

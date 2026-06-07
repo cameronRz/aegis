@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Enum\Role;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -28,19 +27,11 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
-        Gate::before(function (User $user, string $ability) {
-            if (in_array($user->role, [Role::SiteAdmin, Role::Admin], true)) {
-                return true;
-            }
+        Gate::define('admin', fn (User $user) => $user->isAdmin());
 
-            return null;
-        });
-
-        Gate::define('admin', fn (User $user) => in_array($user->role, [Role::SiteAdmin, Role::Admin], true));
-        Gate::define('view_users', fn (User $user) => $user->hasPermission('view_users'));
-        Gate::define('create_user', fn (User $user) => $user->hasPermission('create_user'));
-        Gate::define('edit_user', fn (User $user) => $user->hasPermission('edit_user'));
-        Gate::define('delete_user', fn (User $user) => $user->hasPermission('delete_user'));
+        foreach (['view_users', 'create_user', 'edit_user', 'delete_user'] as $name) {
+            Gate::define($name, fn (User $user) => $user->hasPermission($name));
+        }
     }
 
     /**

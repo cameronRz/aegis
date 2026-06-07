@@ -53,6 +53,16 @@ it('blocks self-editing on the edit page', function () {
     actingAs($this->admin)->get("/admin/users/{$this->admin->id}/edit")->assertForbidden();
 });
 
+it('blocks an admin from editing another admin', function () {
+    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+
+    actingAs($this->admin)->get("/admin/users/{$anotherAdmin->id}/edit")->assertForbidden();
+});
+
+it('allows a site admin to edit another admin', function () {
+    actingAs($this->siteAdmin)->get("/admin/users/{$this->admin->id}/edit")->assertOk();
+});
+
 // --- Role availability on the edit page ---
 
 it('passes all four roles to site admins', function () {
@@ -120,6 +130,17 @@ it('updates a user and redirects to their show page', function () {
 
 it('blocks self-editing on update', function () {
     actingAs($this->admin)->patch("/admin/users/{$this->admin->id}", [
+        'first_name' => 'Hacked',
+        'last_name' => 'Name',
+        'email' => 'hacked@example.com',
+        'role' => 'user',
+    ])->assertForbidden();
+});
+
+it('blocks an admin from updating another admin', function () {
+    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+
+    actingAs($this->admin)->patch("/admin/users/{$anotherAdmin->id}", [
         'first_name' => 'Hacked',
         'last_name' => 'Name',
         'email' => 'hacked@example.com',

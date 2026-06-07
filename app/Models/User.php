@@ -47,13 +47,18 @@ class User extends Authenticatable implements PasskeyUser
             ->withTimestamps();
     }
 
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, [Role::SiteAdmin, Role::Admin], true);
+    }
+
     public function hasPermission(string $permission): bool
     {
-        if (in_array($this->role, [Role::SiteAdmin, Role::Admin], true)) {
+        if ($this->isAdmin()) {
             return true;
         }
 
-        return $this->permissions()->where('name', $permission)->exists();
+        return $this->loadMissing('permissions')->permissions->pluck('name')->contains($permission);
     }
 
     protected function fullName(): Attribute

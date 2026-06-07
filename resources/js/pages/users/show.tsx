@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -19,12 +19,15 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
-import type { Auth, Permission, Role, User } from '@/types';
+import { PRIVILEGED_ROLES } from '@/types';
+import type { Permission, Role, User } from '@/types';
 import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
 
 type Props = {
     user: User & { permissions: Permission[] };
     allPermissions: Permission[];
+    canEdit: boolean;
+    canDelete: boolean;
     canManagePermissions: boolean;
 };
 
@@ -38,28 +41,13 @@ const roleConfig: Record<
     user: { label: 'User', variant: 'outline' },
 };
 
-const privilegedRoles: Role[] = ['site_admin', 'admin'];
-
-type PageProps = { auth: Auth };
-
-export default function UserShow({ user, allPermissions, canManagePermissions }: Props) {
-    const { auth } = usePage<PageProps>().props;
+export default function UserShow({ user, allPermissions, canEdit, canDelete, canManagePermissions }: Props) {
     const { label, variant } = roleConfig[user.role];
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    const canEditUser =
-        auth.can.edit_user &&
-        auth.user.id !== user.id &&
-        (auth.user.role === 'site_admin' || !privilegedRoles.includes(user.role));
-
-    const canDeleteUser =
-        auth.can.delete_user &&
-        auth.user.id !== user.id &&
-        (auth.user.role === 'site_admin' || !privilegedRoles.includes(user.role));
-
     const grantedIds = new Set(user.permissions.map((p) => p.id));
-    const isPrivileged = privilegedRoles.includes(user.role);
+    const isPrivileged = PRIVILEGED_ROLES.includes(user.role);
 
     function fireToggle(permission: Permission, onSuccess?: () => void) {
         router.post(
@@ -110,7 +98,7 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                             </div>
                             <div className="flex items-center gap-3">
                                 <Badge variant={variant}>{label}</Badge>
-                                {canEditUser && (
+                                {canEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={editUser(user).url}>Edit</Link>
                                     </Button>
@@ -118,7 +106,7 @@ export default function UserShow({ user, allPermissions, canManagePermissions }:
                             </div>
                         </div>
                     </CardHeader>
-                    {canDeleteUser && (
+                    {canDelete && (
                         <CardContent className="pt-0">
                             <button
                                 onClick={() => setDeleteOpen(true)}

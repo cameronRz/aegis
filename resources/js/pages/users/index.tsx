@@ -20,6 +20,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { users as adminUsersRoute } from '@/routes/admin';
+import { PRIVILEGED_ROLES } from '@/types';
 import type { Auth, PaginatedData, Role, User } from '@/types';
 
 function goToUser(user: User) {
@@ -41,8 +42,6 @@ const roleConfig: Record<
     user: { label: 'User', variant: 'outline' },
 };
 
-const privilegedRoles: Role[] = ['site_admin', 'admin'];
-
 function RoleBadge({ role }: { role: Role }) {
     const { label, variant } = roleConfig[role];
 
@@ -61,7 +60,7 @@ export default function UsersIndex({ users, filters }: Props) {
     const canEditRow = (target: User) =>
         auth.can.edit_user &&
         auth.user.id !== target.id &&
-        (auth.user.role === 'site_admin' || !privilegedRoles.includes(target.role as Role));
+        (auth.user.role === 'site_admin' || !PRIVILEGED_ROLES.includes(target.role as Role));
 
     const columns = useMemo(
         () => [

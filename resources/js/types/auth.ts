@@ -1,5 +1,7 @@
 export type Role = 'site_admin' | 'admin' | 'manager' | 'user';
 
+export const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];
+
 export type Permission = {
     id: number;
     name: string;
