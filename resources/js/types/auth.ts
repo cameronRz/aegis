@@ -32,7 +32,23 @@ export type Can = {
     create_user: boolean;
     edit_user: boolean;
     delete_user: boolean;
+    view_categories: boolean;
+    create_category: boolean;
+    edit_category: boolean;
+    delete_category: boolean;
     [key: string]: boolean;
+};
+
+export type Category = {
+    id: number;
+    parent_id: number | null;
+    name: string;
+    slug: string;
+    sort_order: number;
+    is_active: boolean;
+    parent?: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
 };
 
 export type Auth = {

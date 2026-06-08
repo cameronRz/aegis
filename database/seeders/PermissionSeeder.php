@@ -30,6 +30,28 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Users',
                 'description' => 'Delete user accounts (managers and users only).',
             ],
+
+            // Categories
+            [
+                'name' => 'view_categories',
+                'display_name' => 'View Categories',
+                'description' => 'Access the categories list.',
+            ],
+            [
+                'name' => 'create_category',
+                'display_name' => 'Create Categories',
+                'description' => 'Create new categories.',
+            ],
+            [
+                'name' => 'edit_category',
+                'display_name' => 'Edit Categories',
+                'description' => 'Edit categories.',
+            ],
+            [
+                'name' => 'delete_category',
+                'display_name' => 'Delete Categories',
+                'description' => 'Delete categories.',
+            ],
         ];
 
         foreach ($permissions as $permission) {
