@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enum\PermissionName;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -29,8 +30,8 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('admin', fn (User $user) => $user->isAdmin());
 
-        foreach (['view_users', 'create_user', 'edit_user', 'delete_user'] as $name) {
-            Gate::define($name, fn (User $user) => $user->hasPermission($name));
+        foreach (PermissionName::cases() as $permission) {
+            Gate::define($permission->value, fn (User $user) => $user->hasPermission($permission));
         }
     }
 

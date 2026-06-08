@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enum\PermissionName;
 use App\Enum\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Appends;
@@ -52,13 +53,13 @@ class User extends Authenticatable implements PasskeyUser
         return in_array($this->role, [Role::SiteAdmin, Role::Admin], true);
     }
 
-    public function hasPermission(string $permission): bool
+    public function hasPermission(PermissionName $permission): bool
     {
         if ($this->isAdmin()) {
             return true;
         }
 
-        return $this->loadMissing('permissions')->permissions->pluck('name')->contains($permission);
+        return $this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value);
     }
 
     protected function fullName(): Attribute

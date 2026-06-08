@@ -35,7 +35,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 
 **Key methods:**
 - `isAdmin(): bool` — returns `true` for `site_admin` and `admin` roles; use this instead of inline `in_array($role, [...])` checks
-- `hasPermission(string $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then checks `$this->loadMissing('permissions')->permissions->pluck('name')->contains($permission)` (in-memory, no additional DB query once loaded)
+- `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then checks `$this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value)` (in-memory, no additional DB query once loaded)
 
 **Fillable:** `first_name`, `last_name`, `email`, `password` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
@@ -86,9 +86,22 @@ site_admin > admin > manager > user
 | `manager` | Elevated above `user`; intended to have more capabilities than regular users |
 | `user` | Base-level access |
 
+### `PermissionName` enum (`App\Enum\PermissionName`)
+
+A string-backed enum that is the single source of truth for permission slugs:
+
+| Case | Value |
+|---|---|
+| `ViewUsers` | `view_users` |
+| `CreateUser` | `create_user` |
+| `EditUser` | `edit_user` |
+| `DeleteUser` | `delete_user` |
+
+Adding a new permission: add a case here, add a row in `PermissionSeeder`, and the gate is auto-registered (no manual `AppServiceProvider` edit needed).
+
 ### Gates (defined in `AppServiceProvider`)
 - `admin` — passes when `$user->isAdmin()`
-- `view_users`, `create_user`, `edit_user`, `delete_user` — each calls `$user->hasPermission($name)`, which already short-circuits for admins via `isAdmin()`
+- One gate per `PermissionName` case — auto-registered via `foreach (PermissionName::cases() as $permission)`. Each calls `$user->hasPermission($permission)`, which short-circuits for admins via `isAdmin()`.
 - **No `Gate::before()`** — removed so that `UserPolicy` methods are never bypassed by a global short-circuit
 
 ### `UserPolicy` (`app/Policies/UserPolicy.php`)
@@ -103,10 +116,10 @@ Auto-discovered by Laravel for the `User` model. No `before()` method — each m
 **Why no `before()` on the policy:** The route-level `can:edit_user` gate already lets admins through (via `hasPermission → isAdmin`). Adding a `before()` on the policy would also let them edit *other* admins, which is intentionally restricted.
 
 ### How permissions work in practice
-- Named permissions (e.g., `view_users`) are rows in the `permissions` table
+- Permissions are defined as `PermissionName` enum cases; their `->value` is the slug stored in the `permissions` table `name` column
 - Granted to individual users via the `user_permissions` pivot
-- `User::hasPermission()` checks the pivot; admins bypass via `isAdmin()` inside `hasPermission()`
-- New feature gates should be added to `AppServiceProvider` and correspond to a `permissions` row
+- `User::hasPermission(PermissionName $permission)` checks `$permission->value` against the pivot; admins bypass via `isAdmin()`
+- Adding a new permission: add a `PermissionName` case → add a `PermissionSeeder` row → gate auto-registers (no `AppServiceProvider` edit needed)
 
 ### Two-layer authorization pattern
 
@@ -122,8 +135,8 @@ Both layers are required. The route gate alone allows admins to modify other adm
 **`Gate::before()` silently bypasses all policies.**
 There is no `Gate::before()` in `AppServiceProvider`. Do not add one. A global `Gate::before()` that returns `true` for admins short-circuits `$this->authorize()` calls in addition to route gates — policies never execute. The admin hierarchy is instead handled inside `hasPermission()` (for gates) and explicitly inside each policy method. If you add a `Gate::before()` for any reason, every policy restriction for admins silently disappears.
 
-**Gate definitions in `AppServiceProvider::boot()` must be static — never DB-driven.**
-Do not replace the gate loop with `Permission::each()` or any DB query in `boot()`. Tests run under `php artisan test`, where `app()->runningInConsole()` is `true`. A `!app()->runningInConsole()` guard would skip gate registration entirely during tests, causing all protected routes to return 403 regardless of user role. Keep gate names as a static list in `boot()`; only the *evaluation* (inside the closure) hits the DB.
+**Gate definitions in `AppServiceProvider::boot()` must be enum-driven — never DB-driven.**
+Do not replace the `PermissionName::cases()` loop with `Permission::each()` or any DB query in `boot()`. Tests run under `php artisan test`, where `app()->runningInConsole()` is `true`. A `!app()->runningInConsole()` guard would skip gate registration entirely during tests, causing all protected routes to return 403 regardless of user role. The gate names come from `PermissionName` enum case values (static); only the *evaluation* (inside the closure) hits the DB.
 
 **`$this->authorize()` requires the `AuthorizesRequests` trait on the base `Controller`.**
 Laravel 12+ ships a minimal base `Controller` class with no traits. This project adds `AuthorizesRequests` explicitly (`app/Http/Controllers/Controller.php`). If `$this->authorize()` ever throws "Call to undefined method", check that the trait is present — the error message does not mention the trait by name.
