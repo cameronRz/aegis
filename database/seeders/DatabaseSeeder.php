@@ -16,15 +16,32 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = User::create([
+        // Site admin
+        $siteAdmin = User::create([
             'first_name' => config('admin.site_admin.first_name'),
             'last_name' => config('admin.site_admin.last_name'),
             'email' => config('admin.site_admin.email'),
             'password' => bcrypt(config('admin.site_admin.password')),
         ]);
+        $siteAdmin->role = Role::SiteAdmin;
+        $siteAdmin->save();
 
-        $admin->role = Role::SiteAdmin->value;
+        // Test users
+        $admin = User::factory()->create([
+            'first_name' => 'Dora',
+            'last_name' => 'Mena',
+            'email' => 'dora@email.com',
+        ]);
+        $admin->role = Role::Admin;
         $admin->save();
+
+        $manager = User::factory()->create([
+            'first_name' => 'Jack',
+            'last_name' => 'Penny',
+            'email' => 'jack@email.com',
+        ]);
+        $manager->role = Role::Manager;
+        $manager->save();
 
         User::factory()->create([
             'first_name' => 'Benny',
@@ -32,6 +49,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'benny@email.com',
         ]);
 
-        User::factory(125)->create();
+        User::factory(5)->create(['role' => Role::Admin]);
+        User::factory(20)->create(['role' => Role::Manager]);
+        User::factory(100)->create();
+
+        // Permissions
+        $this->call(PermissionSeeder::class);
     }
 }

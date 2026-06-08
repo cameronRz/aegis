@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Permission;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -40,6 +42,14 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'can' => $request->user()
+                    ? Permission::all()
+                        ->tap(fn () => $request->user()->loadMissing('permissions'))
+                        ->mapWithKeys(fn (Permission $permission) => [
+                            $permission->name => Gate::allows($permission->name),
+                        ])
+                        ->all()
+                    : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
