@@ -1,6 +1,6 @@
 ---
 name: aegis-models
-description: "Activate when working with Aegis domain models, database schema, or the role/permission system. Triggers: User model, Permission model, Role enum, gates, `user_permissions` pivot, `hasPermission`, database migrations or table structure, form requests, or validation rules. Do NOT activate for frontend-only changes or route definitions."
+description: "Activate when working with Aegis domain models, database schema, or the role/permission system. Triggers: User model, Permission model, Category model, Role enum, PermissionName enum, Sortable trait, gates, `user_permissions` pivot, `hasPermission`, database migrations or table structure, form requests, or validation rules. Do NOT activate for frontend-only changes or route definitions."
 license: MIT
 metadata:
   author: Cameron
@@ -40,6 +40,54 @@ The central model. Represents both admin-side staff and (eventually) client-side
 **Fillable:** `first_name`, `last_name`, `email`, `password` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `TwoFactorAuthenticatable`
+
+---
+
+## Category Model
+
+Self-referential model for organising products into a tree of categories.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `parent_id` | int\|null | FK → categories (null = root) |
+| `name` | string | |
+| `slug` | string | unique |
+| `sort_order` | int | default 0; auto-assigned on create via `Sortable` trait |
+| `is_active` | boolean | default true |
+
+**Fillable:** `parent_id`, `name`, `slug`, `sort_order`, `is_active`
+
+**Casts:** `is_active` → `boolean`
+
+**Traits:** `HasFactory`, `Sortable`
+
+**Relationships:**
+- `parent()` → `BelongsTo(Category)` via `parent_id`
+- `children()` → `HasMany(Category)` via `parent_id`
+
+**Scopes:**
+- `scopeActive()` — filters to `is_active = true`
+- `scopeOrdered()` — orders by `sort_order` then `id` (provided by `Sortable` trait)
+- `scopeRoots()` — filters to `parent_id IS NULL`
+
+**`sortableScope()` override:** returns `['parent_id']` — each group of siblings gets its own independent sort sequence. Root categories (`parent_id = null`) are also scoped correctly.
+
+---
+
+## `Sortable` Trait (`App\Concerns\Sortable`)
+
+Reusable trait for models that need auto-assigned `sort_order`. Apply to any model that has a `sort_order` column.
+
+**What it does:**
+- `bootSortable()` — hooks into `creating`; sets `sort_order` to `max(sort_order) + 1` within the scope. Only fires if `sort_order` is `null` (manually-provided values are respected).
+- `sortableScope(): array` — override in the model to return column names that scope the sequence (e.g. `['parent_id']`, `['category_id']`). Default `[]` = global max.
+- `scopeOrdered(Builder $query)` — orders by `sort_order` then `id` as tiebreaker.
+
+**Adding to a new model:**
+1. Add `use Sortable;` to the model
+2. Override `sortableScope()` if the sort should be scoped (e.g. within a category)
+3. Ensure the table has a `sort_order` integer column
 
 ---
 
@@ -96,6 +144,10 @@ A string-backed enum that is the single source of truth for permission slugs:
 | `CreateUser` | `create_user` |
 | `EditUser` | `edit_user` |
 | `DeleteUser` | `delete_user` |
+| `ViewCategories` | `view_categories` |
+| `CreateCategory` | `create_category` |
+| `EditCategory` | `edit_category` |
+| `DeleteCategory` | `delete_category` |
 
 Adding a new permission: add a case here, add a row in `PermissionSeeder`, and the gate is auto-registered (no manual `AppServiceProvider` edit needed).
 
@@ -150,6 +202,7 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 | `users` | All user accounts (staff and future clients) |
 | `permissions` | Named permission definitions |
 | `user_permissions` | Many-to-many: which users have which permissions |
+| `categories` | Product category tree (self-referential via `parent_id`) |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
 | `sessions` | Database-backed sessions |
@@ -183,6 +236,7 @@ Shared validation traits (in `app/Http/Requests/Concerns/`):
 Form requests:
 - `StoreUserRequest` — validates new user creation; uses `profileRules()` + role + optional permissions
 - `UpdateUserRequest` — validates user edits; same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so the email uniqueness check ignores the current user
+- `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
 
 ### Authorization in `UserController`
 - Route-level: `can:edit_user` / `can:delete_user` gates control access to routes

@@ -23,7 +23,11 @@ DELETE /admin/users/{user}                                 → admin.users.destr
 GET    /admin/users/{user}                                 → admin.users.show                     (can:view_users)
 POST  /admin/users/{user}/permissions/{permission}/toggle  → admin.users.permissions.toggle       (can:admin)
 
-**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason.
+GET  /admin/categories                                     → admin.categories                     (can:view_categories)
+GET  /admin/categories/create                              → admin.categories.create              (can:create_category)
+POST /admin/categories                                     → admin.categories.store               (can:create_category)
+
+**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same ordering applies to `categories/create` before any future `categories/{category}` routes.
 ```
 
 ## `routes/settings.php`

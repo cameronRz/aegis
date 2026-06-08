@@ -16,13 +16,21 @@ metadata:
 | `welcome.tsx` | Public landing page with auth links |
 | `dashboard.tsx` | Authenticated home; placeholder grid (3-col desktop) |
 
-### Admin pages (`users/`)
+### Admin pages
+
+#### `users/`
 | File | Description |
 |---|---|
 | `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
 | `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
 | `users/edit.tsx` | Edit user form: same fields/permission UI as create, pre-filled with existing user data; uses PATCH; self-editing blocked (403) |
+
+#### `categories/`
+| File | Description |
+|---|---|
+| `categories/index.tsx` | Category list with search (name/slug), pagination (15/page), parent name column; "Create Category" button shown when `auth.can.create_category` |
+| `categories/create.tsx` | Create category form: name, slug (auto-generated from name, stops syncing once manually edited), optional parent select, is_active checkbox; `sort_order` is auto-assigned server-side and not shown |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -61,7 +69,7 @@ metadata:
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Users (`view_users`), Categories (`view_categories`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |
@@ -94,7 +102,18 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; delete_user: boolean; [key: string]: boolean };  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
+type Category = {
+    id: number; parent_id: number | null; name: string; slug: string;
+    sort_order: number; is_active: boolean;
+    parent?: { id: number; name: string } | null;
+    created_at: string; updated_at: string;
+};
+
+type Can = {
+    view_users, create_user, edit_user, delete_user,
+    view_categories, create_category, edit_category, delete_category,
+    [key: string]: boolean
+};  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
 
 type Auth = { user: User; can: Can };
 
@@ -155,6 +174,33 @@ There is **no `AlertDialog`** component in this UI library. Do not try to add or
 
 ---
 
+## Select with Nullable Values
+
+Radix UI's `SelectItem` does not allow an empty string `value` — it is reserved internally to mean "clear/show placeholder". For optional foreign-key selects (e.g. `parent_id: number | null`), use a `"none"` sentinel:
+
+```tsx
+<Select
+    value={data.parent_id?.toString() ?? 'none'}
+    onValueChange={(value) =>
+        setData('parent_id', value === 'none' ? null : Number(value))
+    }
+>
+    <SelectTrigger>
+        <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="none">None</SelectItem>
+        {items.map((item) => (
+            <SelectItem key={item.id} value={item.id.toString()}>{item.name}</SelectItem>
+        ))}
+    </SelectContent>
+</Select>
+```
+
+The form state stores `number | null`; the Select converts via the sentinel. Do not use `value=""` on any `SelectItem`.
+
+---
+
 ## Wayfinder URL Patterns
 
 Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
@@ -177,17 +223,20 @@ router.visit(editUser(user).url());     // ✗ TypeError — url is not a functi
 
 ## Named Routes (`@/routes/admin`)
 
-`users` is the **only named export**. Sub-routes (`show`, `edit`, `create`, `store`, `update`, `permissions`) are properties attached to the `users` function — they are not separate named exports.
+`users` and `categories` are the named exports. Sub-routes are properties attached to each function — they are not separate named exports.
 
 ```ts
-import { users as adminUsersRoute } from '@/routes/admin';
+import { users as adminUsersRoute, categories as adminCategoriesRoute } from '@/routes/admin';
 
 adminUsersRoute.url()               // GET /admin/users
 adminUsersRoute.show(user).url      // GET /admin/users/{user}
 adminUsersRoute.edit(user).url      // GET /admin/users/{user}/edit
+
+adminCategoriesRoute.url()          // GET /admin/categories
+adminCategoriesRoute.create.url()   // GET /admin/categories/create
 ```
 
-Destructuring `show` or `edit` directly from `@/routes/admin` yields `undefined`.
+Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admin` yields `undefined` — always access them as properties on the parent route function.
 
 ---
 
