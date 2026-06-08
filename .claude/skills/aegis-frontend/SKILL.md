@@ -29,8 +29,10 @@ metadata:
 #### `categories/`
 | File | Description |
 |---|---|
-| `categories/index.tsx` | Category list with search (name/slug), pagination (15/page), parent name column; "Create Category" button shown when `auth.can.create_category` |
-| `categories/create.tsx` | Create category form: name, slug (auto-generated from name, stops syncing once manually edited), optional parent select, is_active checkbox; `sort_order` is auto-assigned server-side and not shown |
+| `categories/index.tsx` | Category list with search (name/slug), pagination (15/page), parent name column; "Create Category" button shown when `auth.can.create_category`; Edit/Delete action buttons per row shown when `auth.can.edit_category` / `auth.can.delete_category`; single shared delete Dialog populated by row state |
+| `categories/create.tsx` | Create category form; uses `CategoryFormFields`; `sort_order` is auto-assigned server-side and not shown |
+| `categories/edit.tsx` | Edit category form; pre-fills from `category` prop; uses PATCH via `update(category).url`; uses `CategoryFormFields`; parent options exclude the category itself (server-side) |
+| `categories/category-form-fields.tsx` | **Shared domain component** — exports `CategoryFormData` type, `ParentCategory` type, and `CategoryFormFields` component. Owns slug auto-sync logic (`slugAutoSync` ref starts `true` when slug is empty → auto-generates from name; becomes `false` once user edits slug or on edit page where slug is pre-filled). Used by both `create.tsx` and `edit.tsx`. |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -234,6 +236,12 @@ adminUsersRoute.edit(user).url      // GET /admin/users/{user}/edit
 
 adminCategoriesRoute.url()          // GET /admin/categories
 adminCategoriesRoute.create.url()   // GET /admin/categories/create
+
+import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
+
+editCategory(category).url          // GET /admin/categories/{id}/edit  (string property)
+updateCategory(category).url        // PATCH /admin/categories/{id}      (string property)
+destroyCategory(category).url       // DELETE /admin/categories/{id}     (string property)
 ```
 
 Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admin` yields `undefined` — always access them as properties on the parent route function.

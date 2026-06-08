@@ -237,6 +237,7 @@ Form requests:
 - `StoreUserRequest` — validates new user creation; uses `profileRules()` + role + optional permissions
 - `UpdateUserRequest` — validates user edits; same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so the email uniqueness check ignores the current user
 - `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
+- `UpdateCategoryRequest` — same rules as `StoreCategoryRequest` except the slug uniqueness check ignores the current category via `Rule::unique('categories', 'slug')->ignore($this->route('category'))`.
 
 ### Authorization in `UserController`
 - Route-level: `can:edit_user` / `can:delete_user` gates control access to routes

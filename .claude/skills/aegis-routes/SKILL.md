@@ -23,11 +23,14 @@ DELETE /admin/users/{user}                                 → admin.users.destr
 GET    /admin/users/{user}                                 → admin.users.show                     (can:view_users)
 POST  /admin/users/{user}/permissions/{permission}/toggle  → admin.users.permissions.toggle       (can:admin)
 
-GET  /admin/categories                                     → admin.categories                     (can:view_categories)
-GET  /admin/categories/create                              → admin.categories.create              (can:create_category)
-POST /admin/categories                                     → admin.categories.store               (can:create_category)
+GET   /admin/categories                                    → admin.categories                     (can:view_categories)
+GET   /admin/categories/create                             → admin.categories.create              (can:create_category)
+POST  /admin/categories                                    → admin.categories.store               (can:create_category)
+GET   /admin/categories/{category}/edit                    → admin.categories.edit                (can:edit_category)
+PATCH /admin/categories/{category}                         → admin.categories.update              (can:edit_category)
+DELETE /admin/categories/{category}                        → admin.categories.destroy             (can:delete_category)
 
-**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same ordering applies to `categories/create` before any future `categories/{category}` routes.
+**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories: `categories/create` is before `categories/{category}`, and `categories/{category}/edit` is before any future `categories/{category}` show route.
 ```
 
 ## `routes/settings.php`
