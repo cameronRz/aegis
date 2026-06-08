@@ -7,7 +7,19 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+    destroy as destroyCategory,
+    edit as editCategory,
+} from '@/actions/App/Http/Controllers/CategoryController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -33,6 +45,11 @@ export default function CategoriesIndex({ categories, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const isFirstRender = useRef(true);
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const canEdit = auth.can.edit_category;
+    const canDelete = auth.can.delete_category;
 
     const columns = useMemo(
         () => [
@@ -41,10 +58,47 @@ export default function CategoriesIndex({ categories, filters }: Props) {
             columnHelper.display({
                 id: 'parent',
                 header: 'Parent',
-                cell: ({ row }) => row.original.parent?.name ?? <span className="text-muted-foreground">—</span>,
+                cell: ({ row }) =>
+                    row.original.parent?.name ?? (
+                        <span className="text-muted-foreground">—</span>
+                    ),
             }),
+            ...(canEdit || canDelete
+                ? [
+                      columnHelper.display({
+                          id: 'actions',
+                          header: '',
+                          cell: ({ row }) => (
+                              <div className="flex justify-end gap-2">
+                                  {canEdit && (
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          asChild
+                                          onClick={(e) => e.stopPropagation()}
+                                      >
+                                          <Link href={editCategory(row.original).url}>Edit</Link>
+                                      </Button>
+                                  )}
+                                  {canDelete && (
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCategoryToDelete(row.original);
+                                          }}
+                                      >
+                                          Delete
+                                      </Button>
+                                  )}
+                              </div>
+                          ),
+                      }),
+                  ]
+                : []),
         ],
-        [],
+        [canEdit, canDelete],
     );
 
     useEffect(() => {
@@ -77,6 +131,20 @@ export default function CategoriesIndex({ categories, filters }: Props) {
         if (!url) return;
 
         router.get(url, {}, { preserveState: true });
+    }
+
+    function handleDelete() {
+        if (!categoryToDelete) return;
+
+        setDeleting(true);
+
+        router.delete(destroyCategory(categoryToDelete).url, {
+            onSuccess: () => {
+                setCategoryToDelete(null);
+                setDeleting(false);
+            },
+            onError: () => setDeleting(false),
+        });
     }
 
     const pageLinks = categories.links.filter(
@@ -182,6 +250,30 @@ export default function CategoriesIndex({ categories, filters }: Props) {
                     </div>
                 </div>
             </div>
+
+            <Dialog
+                open={categoryToDelete !== null}
+                onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+            >
+                <DialogContent aria-describedby={undefined}>
+                    <DialogTitle>Delete Category</DialogTitle>
+                    <Alert variant="destructive">
+                        <AlertTitle>Are you sure?</AlertTitle>
+                        <AlertDescription>
+                            <strong>{categoryToDelete?.name}</strong> will be permanently deleted.
+                            Child categories will become root categories.
+                        </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
