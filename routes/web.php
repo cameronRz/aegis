@@ -59,6 +59,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('can:view_products')->group(function () {
             Route::get('products', [ProductController::class, 'index'])->name('products');
         });
+
+        Route::middleware('can:create_product')->group(function () {
+            Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+            Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        });
     });
 });
 

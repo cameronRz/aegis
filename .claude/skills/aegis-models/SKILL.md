@@ -64,7 +64,7 @@ Represents items available for purchase. Supports physical goods, digital downlo
 | `stock_quantity` | int\|null | null = unlimited |
 | `track_inventory` | boolean | default false |
 | `sort_order` | int | default 0; auto-assigned via `Sortable` trait |
-| `image` | string | |
+| `image` | string\|null | path under `storage/app/public/products/`; null if no image uploaded |
 | `deleted_at` | timestamp\|null | soft deletes |
 
 **Fillable:** `category_id`, `name`, `type`, `sku`, `is_active`, `description`, `price`, `price_type`, `billing_interval`, `billing_interval_count`, `trial_period_days`, `stock_quantity`, `track_inventory`, `sort_order`, `image`
@@ -72,6 +72,8 @@ Represents items available for purchase. Supports physical goods, digital downlo
 **Casts:** `type` → `ProductType`, `price_type` → `PriceType`, `billing_interval` → `BillingInterval`, `is_active` → `boolean`, `track_inventory` → `boolean`
 
 **Traits:** `HasFactory`, `SoftDeletes`, `Sortable`
+
+**Image storage:** uploaded files are stored on the `public` disk under `products/` via `storage:link`. The `image` column holds the relative path (e.g. `products/abc123.jpg`). Use `Storage::url($product->image)` or `asset('storage/' . $product->image)` to build the public URL.
 
 **Relationships:**
 - `category()` → `BelongsTo(Category)`
@@ -289,6 +291,7 @@ Form requests:
 - `UpdateUserRequest` — validates user edits; same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so the email uniqueness check ignores the current user
 - `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
 - `UpdateCategoryRequest` — same rules as `StoreCategoryRequest` except the slug uniqueness check ignores the current category via `Rule::unique('categories', 'slug')->ignore($this->route('category'))`.
+- `StoreProductRequest` — validates `name`, `sku` (unique), `description`, `category_id` (nullable FK), `type` (enum), `is_active`, `price` (integer cents), `price_type` (enum), `billing_interval` + `billing_interval_count` (required when `type = subscription`, via `Rule::requiredIf`), `trial_period_days` (nullable int), `track_inventory`, `stock_quantity` (required when `track_inventory = true`), `image` (nullable image file, max 2 MB). `sort_order` excluded — auto-assigned scoped to `category_id`.
 
 ### Authorization in `UserController`
 - Route-level: `can:edit_user` / `can:delete_user` gates control access to routes

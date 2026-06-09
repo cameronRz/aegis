@@ -37,7 +37,9 @@ metadata:
 #### `products/`
 | File | Description |
 |---|---|
-| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows rendered at `opacity-50`; Edit action button shown when `auth.can.edit_product` (disabled — not yet wired) |
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` (disabled — not yet wired) |
+| `products/create.tsx` | Create product form; uses `ProductFormFields`; `sort_order` excluded — auto-assigned server-side; submits with `forceFormData: true` for image upload |
+| `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. Accepts optional `existingImageUrl` for edit page reuse. |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -56,6 +58,8 @@ metadata:
 | `auth/verify-email.tsx` | Email verification prompt |
 | `auth/two-factor-challenge.tsx` | TOTP code entry during login |
 | `auth/confirm-password.tsx` | Re-confirm password for sensitive actions |
+
+**React 19 type convention:** Do not use `React.FormEvent`, `React.ChangeEvent`, etc. — the `React` namespace is deprecated in React 19. Either use inline arrow functions so TypeScript infers the event type from the prop, or import named types directly (`import type { FormEvent } from 'react'`).
 
 **Page conventions:**
 - Each page sets a `.layout` property that passes breadcrumbs and titles to the app layout
@@ -126,7 +130,7 @@ type Product = {
     price_type: PriceType; billing_interval: BillingInterval | null;
     billing_interval_count: number | null; trial_period_days: number | null;
     stock_quantity: number | null; track_inventory: boolean; sort_order: number;
-    image: string; category?: { id: number; name: string } | null;
+    image: string | null; category?: { id: number; name: string } | null;
     created_at: string; updated_at: string;
 };
 
@@ -230,6 +234,44 @@ The form state stores `number | null`; the Select converts via the sentinel. Do 
 
 ---
 
+## File Uploads
+
+When a form includes a file, pass `{ forceFormData: true }` to `post()`:
+```tsx
+post(storeProduct.url(), { forceFormData: true });
+```
+Store the file as `File | null` in `useForm` state. Image previews use a local `useState<string | null>` for the object URL — always revoke it in a `useEffect` cleanup to avoid memory leaks:
+```tsx
+useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+```
+On the backend, store with `$request->file('image')->store('products', 'public')` and guard with `$request->hasFile('image')` before calling `->store()` when the field is nullable.
+
+## Price Inputs (cents → dollars)
+
+Never use a fully controlled `type="number"` input with a formatted value — it fights the browser cursor and causes digits to increment rather than append. The established pattern:
+
+```tsx
+// Local display state — not reformatted on every keystroke
+const [priceDisplay, setPriceDisplay] = useState(data.price > 0 ? (data.price / 100).toFixed(2) : '');
+
+<Input
+    type="text"
+    inputMode="decimal"
+    placeholder="0.00"
+    value={priceDisplay}
+    onChange={(e) => {
+        const val = e.target.value;
+        if (!/^\d*\.?\d*$/.test(val)) return;  // reject non-numeric
+        setPriceDisplay(val);
+        setData('price', isNaN(parseFloat(val)) ? 0 : Math.round(parseFloat(val) * 100));
+    }}
+    onBlur={() => setPriceDisplay(data.price > 0 ? (data.price / 100).toFixed(2) : '')}
+/>
+```
+`type="text"` + `inputMode="decimal"` gives the mobile numeric keyboard without the browser stepping behaviour. Normalise to 2dp only on blur.
+
+---
+
 ## Wayfinder URL Patterns
 
 Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
@@ -265,6 +307,7 @@ adminCategoriesRoute.url()          // GET /admin/categories
 adminCategoriesRoute.create.url()   // GET /admin/categories/create
 
 adminProductsRoute.url()            // GET /admin/products
+adminProductsRoute.create.url()     // GET /admin/products/create
 
 import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
 

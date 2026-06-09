@@ -34,7 +34,7 @@ class ProductFactory extends Factory
             'stock_quantity' => null,
             'track_inventory' => false,
             'sort_order' => 0,
-            'image' => fake()->imageUrl(),
+            'image' => null,
         ];
     }
 

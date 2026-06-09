@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,5 +31,26 @@ class ProductController extends Controller
             'products' => $products,
             'filters' => $request->only('search'),
         ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('products/create', [
+            'categories' => Category::query()->ordered()->get(['id', 'name']),
+        ]);
+    }
+
+    public function store(StoreProductRequest $request): RedirectResponse
+    {
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('products', 'public')
+            : null;
+
+        Product::create([
+            ...$request->safe()->except('image'),
+            'image' => $imagePath,
+        ]);
+
+        return redirect()->route('admin.products');
     }
 }

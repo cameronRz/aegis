@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     createColumnHelper,
     flexRender,
@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { create as createProduct } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,6 +143,11 @@ export default function ProductsIndex({ products, filters }: Props) {
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-sm"
                     />
+                    {auth.can.create_product && (
+                        <Button asChild>
+                            <Link href={createProduct.url()}>Create Product</Link>
+                        </Button>
+                    )}
                 </div>
 
                 <div className="rounded-md border">

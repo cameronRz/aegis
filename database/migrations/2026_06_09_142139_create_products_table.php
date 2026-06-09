@@ -27,7 +27,7 @@ return new class extends Migration
             $table->unsignedInteger('stock_quantity')->nullable();
             $table->boolean('track_inventory')->default(false);
             $table->integer('sort_order')->default(0);
-            $table->string('image');
+            $table->string('image')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

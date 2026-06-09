@@ -31,6 +31,8 @@ PATCH /admin/categories/{category}                         → admin.categories.
 DELETE /admin/categories/{category}                        → admin.categories.destroy             (can:delete_category)
 
 GET   /admin/products                                      → admin.products                       (can:view_products)
+GET   /admin/products/create                               → admin.products.create                (can:create_product)
+POST  /admin/products                                      → admin.products.store                 (can:create_product)
 
 **Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories: `categories/create` is before `categories/{category}`, and `categories/{category}/edit` is before any future `categories/{category}` show route.
 ```

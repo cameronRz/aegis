@@ -75,7 +75,7 @@ export type Product = {
     stock_quantity: number | null;
     track_inventory: boolean;
     sort_order: number;
-    image: string;
+    image: string | null;
     category?: { id: number; name: string } | null;
     created_at: string;
     updated_at: string;
