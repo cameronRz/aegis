@@ -43,6 +43,52 @@ The central model. Represents both admin-side staff and (eventually) client-side
 
 ---
 
+## Product Model
+
+Represents items available for purchase. Supports physical goods, digital downloads, and subscriptions.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `category_id` | int\|null | FK → categories (null on delete) |
+| `name` | string | |
+| `type` | `ProductType` enum | `physical`, `digital`, `subscription` |
+| `sku` | string | unique |
+| `is_active` | boolean | default true |
+| `description` | string | |
+| `price` | unsignedInteger | stored in cents |
+| `price_type` | `PriceType` enum | `one_time`, `recurring` |
+| `billing_interval` | `BillingInterval` enum\|null | `weekly`, `monthly`, `yearly`; null for non-subscriptions |
+| `billing_interval_count` | int\|null | e.g. 2 + `weekly` = every two weeks |
+| `trial_period_days` | int\|null | |
+| `stock_quantity` | int\|null | null = unlimited |
+| `track_inventory` | boolean | default false |
+| `sort_order` | int | default 0; auto-assigned via `Sortable` trait |
+| `image` | string | |
+| `deleted_at` | timestamp\|null | soft deletes |
+
+**Fillable:** `category_id`, `name`, `type`, `sku`, `is_active`, `description`, `price`, `price_type`, `billing_interval`, `billing_interval_count`, `trial_period_days`, `stock_quantity`, `track_inventory`, `sort_order`, `image`
+
+**Casts:** `type` → `ProductType`, `price_type` → `PriceType`, `billing_interval` → `BillingInterval`, `is_active` → `boolean`, `track_inventory` → `boolean`
+
+**Traits:** `HasFactory`, `SoftDeletes`, `Sortable`
+
+**Relationships:**
+- `category()` → `BelongsTo(Category)`
+
+**Scopes:**
+- `scopeActive()` — filters to `is_active = true`
+- `scopeOrdered()` — orders by `sort_order` then `id` (provided by `Sortable` trait)
+
+**`sortableScope()` override:** returns `['category_id']` — sort sequence is scoped per category.
+
+**Enums (all in `App\Enum\`):**
+- `ProductType` — `Physical`, `Digital`, `Subscription`
+- `PriceType` — `OneTime`, `Recurring`
+- `BillingInterval` — `Weekly`, `Monthly`, `Yearly`
+
+---
+
 ## Category Model
 
 Self-referential model for organising products into a tree of categories.
@@ -203,6 +249,7 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 | `permissions` | Named permission definitions |
 | `user_permissions` | Many-to-many: which users have which permissions |
 | `categories` | Product category tree (self-referential via `parent_id`) |
+| `products` | Products available for purchase (physical, digital, subscription) |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
 | `sessions` | Database-backed sessions |

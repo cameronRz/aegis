@@ -14,4 +14,10 @@ enum PermissionName: string
     case CreateCategory = 'create_category';
     case EditCategory = 'edit_category';
     case DeleteCategory = 'delete_category';
+
+    // Products
+    case ViewProducts = 'view_products';
+    case CreateProduct = 'create_product';
+    case EditProduct = 'edit_product';
+    case DeleteProduct = 'delete_product';
 }

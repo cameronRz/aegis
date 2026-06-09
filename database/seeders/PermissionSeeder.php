@@ -40,7 +40,7 @@ class PermissionSeeder extends Seeder
             [
                 'name' => 'create_category',
                 'display_name' => 'Create Categories',
-                'description' => 'Create new categories.',
+                'description' => 'Create a new categories.',
             ],
             [
                 'name' => 'edit_category',
@@ -51,6 +51,28 @@ class PermissionSeeder extends Seeder
                 'name' => 'delete_category',
                 'display_name' => 'Delete Categories',
                 'description' => 'Delete categories.',
+            ],
+
+            // Products
+            [
+                'name' => 'view_products',
+                'display_name' => 'View Products',
+                'description' => 'Access the products list.',
+            ],
+            [
+                'name' => 'create_product',
+                'display_name' => 'Create Product',
+                'description' => 'Create a new product.',
+            ],
+            [
+                'name' => 'edit_product',
+                'display_name' => 'Edit Product',
+                'description' => 'Edit products.',
+            ],
+            [
+                'name' => 'delete_product',
+                'display_name' => 'Delete Product',
+                'description' => 'Delete products.',
             ],
         ];
 
