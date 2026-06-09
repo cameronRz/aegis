@@ -65,6 +65,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
         });
 
+        // Literal segments declared before parametric {product} routes
+        Route::middleware('can:admin')->group(function () {
+            Route::get('products/trash', [ProductController::class, 'trash'])->name('products.trash');
+            Route::delete('products/{product}/force', [ProductController::class, 'forceDestroy'])
+                ->withTrashed()
+                ->name('products.force-destroy');
+        });
+
+        Route::middleware('can:delete_product')->group(function () {
+            Route::post('products/{product}/restore', [ProductController::class, 'restore'])
+                ->withTrashed()
+                ->name('products.restore');
+        });
+
         Route::middleware('can:edit_product')->group(function () {
             Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
             Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');

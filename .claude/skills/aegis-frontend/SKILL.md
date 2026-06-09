@@ -37,8 +37,9 @@ metadata:
 #### `products/`
 | File | Description |
 |---|---|
-| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "View Trash" subtle link shown for admins (`PRIVILEGED_ROLES`); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
 | `products/show.tsx` | Two-card detail view: Card 1 shows image (if present), name, SKU, type badge, active badge, category, description, Edit button (when `canEdit`), and "Delete product" subtle link (when `canDelete`); Card 2 shows pricing details with type-specific fields (billing interval + trial for subscriptions; inventory tracking for physical). `canEdit` and `canDelete` are computed server-side via `Gate::allows()`. |
+| `products/trash.tsx` | Admin-only trash bin: paginated table of soft-deleted products with Name, SKU, Type badge, Price, Deleted date columns. Restore button (POST, no confirmation). Permanently Delete button opens a confirmation Dialog. Search by name/SKU. "Products" breadcrumb links back to the index. |
 | `products/create.tsx` | Create product form; uses `ProductFormFields`; `sort_order` excluded — auto-assigned server-side; submits with `forceFormData: true` for image upload |
 | `products/edit.tsx` | Edit product form; pre-fills all fields from `product` prop; passes `imageUrl` to `ProductFormFields` as `existingImageUrl`; submits via PATCH with `forceFormData: true` |
 | `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. `remove_image` checkbox shown on edit when `existingImageUrl` is set and no new file is selected; checking it clears the file input and hides the preview. |
@@ -133,7 +134,7 @@ type Product = {
     billing_interval_count: number | null; trial_period_days: number | null;
     stock_quantity: number | null; track_inventory: boolean; sort_order: number;
     image: string | null; category?: { id: number; name: string } | null;
-    created_at: string; updated_at: string;
+    deleted_at: string | null; created_at: string; updated_at: string;
 };
 
 type Can = {
@@ -320,6 +321,13 @@ import { show as showProduct, destroy as destroyProduct } from '@/actions/App/Ht
 
 showProduct(product).url            // GET /admin/products/{id}        (string property)
 destroyProduct(product).url         // DELETE /admin/products/{id}     (string property)
+
+import { trash as trashProducts, restore as restoreProduct, forceDestroy as forceDestroyProduct } from '@/actions/App/Http/Controllers/ProductController';
+
+trashProducts.url()                 // GET /admin/products/trash        (no-arg, method on function)
+adminProductsRoute.trash.url()      // same, via named route
+restoreProduct(product).url         // POST /admin/products/{id}/restore (string property)
+forceDestroyProduct(product).url    // DELETE /admin/products/{id}/force (string property)
 
 import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
 

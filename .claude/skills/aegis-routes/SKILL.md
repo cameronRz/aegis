@@ -33,12 +33,17 @@ DELETE /admin/categories/{category}                        → admin.categories.
 GET   /admin/products                                      → admin.products                       (can:view_products)
 GET   /admin/products/create                               → admin.products.create                (can:create_product)
 POST  /admin/products                                      → admin.products.store                 (can:create_product)
+GET   /admin/products/trash                                → admin.products.trash                 (can:admin)
 GET   /admin/products/{product}/edit                       → admin.products.edit                  (can:edit_product)
 PATCH /admin/products/{product}                            → admin.products.update                (can:edit_product)
 DELETE /admin/products/{product}                           → admin.products.destroy               (can:delete_product)
+POST  /admin/products/{product}/restore  [withTrashed]     → admin.products.restore               (can:delete_product)
+DELETE /admin/products/{product}/force   [withTrashed]     → admin.products.force-destroy         (can:admin)
 GET   /admin/products/{product}                            → admin.products.show                  (can:view_products)
 
-**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories: `categories/create` is before `categories/{category}`, and `categories/{category}/edit` is before any future `categories/{category}` show route.
+**`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
+
+**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories and products: `products/create` and `products/trash` are declared before `products/{product}`, and `products/{product}/edit` before `products/{product}` (show). Always declare literal-segment routes before parametric routes at the same depth.
 ```
 
 ## `routes/settings.php`

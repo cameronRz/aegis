@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     createColumnHelper,
     flexRender,
@@ -8,12 +8,19 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-    create as createProduct,
-    edit as editProduct,
-    show as showProduct,
+    forceDestroy as forceDestroyProduct,
+    restore as restoreProduct,
 } from '@/actions/App/Http/Controllers/ProductController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -25,8 +32,7 @@ import {
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
 import { products as adminProductsRoute } from '@/routes/admin';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Auth, PaginatedData, Product, ProductType, Role } from '@/types';
+import type { Auth, PaginatedData, Product, ProductType } from '@/types';
 
 type Props = {
     products: PaginatedData<Product>;
@@ -42,24 +48,24 @@ const typeConfig: Record<
     subscription: { label: 'Subscription', variant: 'outline' },
 };
 
-function ProductTypeBadge({ type }: { type: ProductType }) {
-    const { label, variant } = typeConfig[type];
-
-    return <Badge variant={variant}>{label}</Badge>;
+function formatDeletedAt(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
 }
 
 const columnHelper = createColumnHelper<Product>();
 
 type PageProps = { auth: Auth };
 
-function goToProduct(product: Product) {
-    router.visit(showProduct(product).url);
-}
-
-export default function ProductsIndex({ products, filters }: Props) {
-    const { auth } = usePage<PageProps>().props;
+export default function ProductsTrash({ products, filters }: Props) {
+    usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const isFirstRender = useRef(true);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const columns = useMemo(
         () => [
@@ -67,42 +73,53 @@ export default function ProductsIndex({ products, filters }: Props) {
             columnHelper.accessor('sku', { header: 'SKU' }),
             columnHelper.accessor('type', {
                 header: 'Type',
-                cell: ({ getValue }) => <ProductTypeBadge type={getValue()} />,
+                cell: ({ getValue }) => {
+                    const { label, variant } = typeConfig[getValue()];
+                    return <Badge variant={variant}>{label}</Badge>;
+                },
             }),
             columnHelper.accessor('price', {
                 header: 'Price',
                 cell: ({ getValue }) => formatCents(getValue()),
             }),
             columnHelper.display({
-                id: 'category',
-                header: 'Category',
+                id: 'deleted_at',
+                header: 'Deleted',
                 cell: ({ row }) =>
-                    row.original.category?.name ?? (
-                        <span className="text-muted-foreground">—</span>
-                    ),
+                    row.original.deleted_at ? formatDeletedAt(row.original.deleted_at) : '—',
             }),
-            ...(auth.can.edit_product
-                ? [
-                      columnHelper.display({
-                          id: 'actions',
-                          header: '',
-                          cell: ({ row }) => (
-                              <div className="flex justify-end">
-                                  <Button
-                                      variant="outline"
-                                      size="sm"
-                                      asChild
-                                      onClick={(e) => e.stopPropagation()}
-                                  >
-                                      <Link href={editProduct(row.original).url}>Edit</Link>
-                                  </Button>
-                              </div>
-                          ),
-                      }),
-                  ]
-                : []),
+            columnHelper.display({
+                id: 'actions',
+                header: '',
+                cell: ({ row }) => (
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                router.post(restoreProduct(row.original).url, {}, {
+                                    preserveScroll: true,
+                                });
+                            }}
+                        >
+                            Restore
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setProductToDelete(row.original);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                ),
+            }),
         ],
-        [auth.can.edit_product],
+        [],
     );
 
     useEffect(() => {
@@ -114,7 +131,7 @@ export default function ProductsIndex({ products, filters }: Props) {
 
         const timer = setTimeout(() => {
             router.get(
-                adminProductsRoute.url(),
+                adminProductsRoute.trash.url(),
                 { search: search || undefined },
                 { preserveState: true, replace: true },
             );
@@ -137,36 +154,35 @@ export default function ProductsIndex({ products, filters }: Props) {
         router.get(url, {}, { preserveState: true });
     }
 
+    function handleForceDelete() {
+        if (!productToDelete) return;
+
+        setDeleting(true);
+
+        router.delete(forceDestroyProduct(productToDelete).url, {
+            onSuccess: () => {
+                setProductToDelete(null);
+                setDeleting(false);
+            },
+            onError: () => setDeleting(false),
+        });
+    }
+
     const pageLinks = products.links.filter(
         (link) => link.label !== '&laquo; Previous' && link.label !== 'Next &raquo;',
     );
 
     return (
         <>
-            <Head title="Products" />
+            <Head title="Product Trash" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
                     <Input
                         placeholder="Search by name or SKU..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-sm"
                     />
-                    <div className="flex items-center gap-3">
-                        {PRIVILEGED_ROLES.includes(auth.user.role as Role) && (
-                            <Link
-                                href={adminProductsRoute.trash.url()}
-                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                View Trash
-                            </Link>
-                        )}
-                        {auth.can.create_product && (
-                            <Button asChild>
-                                <Link href={createProduct.url()}>Create Product</Link>
-                            </Button>
-                        )}
-                    </div>
                 </div>
 
                 <div className="rounded-md border">
@@ -188,11 +204,7 @@ export default function ProductsIndex({ products, filters }: Props) {
                         <TableBody>
                             {table.getRowModel().rows.length ? (
                                 table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className={`cursor-pointer${!row.original.is_active ? ' opacity-50' : ''}`}
-                                        onClick={() => goToProduct(row.original)}
-                                    >
+                                    <TableRow key={row.id}>
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
                                                 {flexRender(
@@ -209,7 +221,7 @@ export default function ProductsIndex({ products, filters }: Props) {
                                         colSpan={columns.length}
                                         className="h-24 text-center"
                                     >
-                                        No products found.
+                                        No deleted products.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -254,10 +266,43 @@ export default function ProductsIndex({ products, filters }: Props) {
                     </div>
                 </div>
             </div>
+
+            <Dialog
+                open={productToDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setProductToDelete(null);
+                }}
+            >
+                <DialogContent aria-describedby={undefined}>
+                    <DialogTitle>Permanently Delete Product</DialogTitle>
+                    <Alert variant="destructive">
+                        <AlertTitle>This cannot be undone.</AlertTitle>
+                        <AlertDescription>
+                            <strong>{productToDelete?.name}</strong> will be permanently deleted
+                            and cannot be recovered.
+                        </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            disabled={deleting}
+                            onClick={handleForceDelete}
+                        >
+                            Delete permanently
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
-ProductsIndex.layout = {
-    breadcrumbs: [{ title: 'Products', href: adminProductsRoute.url() }],
+ProductsTrash.layout = {
+    breadcrumbs: [
+        { title: 'Products', href: adminProductsRoute.url() },
+        { title: 'Trash' },
+    ],
 };

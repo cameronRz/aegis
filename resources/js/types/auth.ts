@@ -77,6 +77,7 @@ export type Product = {
     sort_order: number;
     image: string | null;
     category?: { id: number; name: string } | null;
+    deleted_at: string | null;
     created_at: string;
     updated_at: string;
 };

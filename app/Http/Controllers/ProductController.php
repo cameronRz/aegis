@@ -36,6 +36,27 @@ class ProductController extends Controller
         ]);
     }
 
+    public function trash(Request $request): Response
+    {
+        $products = Product::onlyTrashed()
+            ->with('category:id,name')
+            ->when(
+                $request->input('search'),
+                fn ($query, string $search) => $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%");
+                })
+            )
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('products/trash', [
+            'products' => $products,
+            'filters' => $request->only('search'),
+        ]);
+    }
+
     public function create(): Response
     {
         return Inertia::render('products/create', [
@@ -107,5 +128,23 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('admin.products');
+    }
+
+    public function restore(Product $product): RedirectResponse
+    {
+        $product->restore();
+
+        return redirect()->route('admin.products.trash');
+    }
+
+    public function forceDestroy(Product $product): RedirectResponse
+    {
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->forceDelete();
+
+        return redirect()->route('admin.products.trash');
     }
 }

@@ -294,8 +294,17 @@ Form requests:
 - `StoreProductRequest` — validates `name`, `sku` (unique), `description`, `category_id` (nullable FK), `type` (enum), `is_active`, `price` (integer cents), `price_type` (enum), `billing_interval` + `billing_interval_count` (required when `type = subscription`, via `Rule::requiredIf`), `trial_period_days` (nullable int), `track_inventory`, `stock_quantity` (required when `track_inventory = true`), `image` (nullable image file, max 2 MB). `sort_order` excluded — auto-assigned scoped to `category_id`.
 - `UpdateProductRequest` — same rules as `StoreProductRequest` except: SKU uniqueness ignores the current product via `Rule::unique()->ignore($this->route('product'))`; adds `remove_image` (boolean). `sort_order` excluded — controller resets it to end of new category when `category_id` changes, otherwise preserves it.
 
-### Delete behaviour
-`ProductController::destroy()` soft-deletes via `$product->delete()`. The image file on disk is **not** deleted on soft-delete, preserving it for potential restore. Redirects to `admin.products`.
+### Delete / Trash / Restore behaviour
+
+| Action | Method | Image | Redirect |
+|---|---|---|---|
+| Soft-delete (show page) | `destroy()` — `$product->delete()` | Kept on disk | `admin.products` |
+| Restore (trash page) | `restore()` — `$product->restore()` | Unchanged | `admin.products.trash` |
+| Force delete (trash page) | `forceDestroy()` — `$product->forceDelete()` | Deleted from public disk | `admin.products.trash` |
+
+Soft-delete keeps the image on disk because the record may be restored. Force delete cleans up the image since the record is gone permanently.
+
+`restore` and `forceDestroy` routes use `->withTrashed()` so route model binding finds soft-deleted records. Without it, the binding 404s on trashed products.
 
 ### Sort order on product update
 The `Sortable` trait only fires on `creating`. On update, `ProductController::update()` handles sort order manually: if `category_id` changed, it sets `sort_order = max(sort_order) + 1` within the new category (using `Product::where('category_id', $newId)->max('sort_order') + 1`, which handles `null` correctly via Laravel's query builder). If category is unchanged, sort_order is not modified.
