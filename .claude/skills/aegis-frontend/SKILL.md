@@ -34,6 +34,11 @@ metadata:
 | `categories/edit.tsx` | Edit category form; pre-fills from `category` prop; uses PATCH via `update(category).url`; uses `CategoryFormFields`; parent options exclude the category itself (server-side) |
 | `categories/category-form-fields.tsx` | **Shared domain component** — exports `CategoryFormData` type, `ParentCategory` type, and `CategoryFormFields` component. Owns slug auto-sync logic (`slugAutoSync` ref starts `true` when slug is empty → auto-generates from name; becomes `false` once user edits slug or on edit page where slug is pre-filled). Used by both `create.tsx` and `edit.tsx`. |
 
+#### `products/`
+| File | Description |
+|---|---|
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows rendered at `opacity-50`; Edit action button shown when `auth.can.edit_product` (disabled — not yet wired) |
+
 ### Settings pages (`settings/`)
 | File | Description |
 |---|---|
@@ -71,7 +76,7 @@ metadata:
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Users (`view_users`), Categories (`view_categories`) |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |
@@ -111,9 +116,24 @@ type Category = {
     created_at: string; updated_at: string;
 };
 
+type ProductType = 'physical' | 'digital' | 'subscription';
+type PriceType = 'one_time' | 'recurring';
+type BillingInterval = 'weekly' | 'monthly' | 'yearly';
+
+type Product = {
+    id: number; category_id: number | null; name: string; type: ProductType;
+    sku: string; is_active: boolean; description: string; price: number;  // cents
+    price_type: PriceType; billing_interval: BillingInterval | null;
+    billing_interval_count: number | null; trial_period_days: number | null;
+    stock_quantity: number | null; track_inventory: boolean; sort_order: number;
+    image: string; category?: { id: number; name: string } | null;
+    created_at: string; updated_at: string;
+};
+
 type Can = {
     view_users, create_user, edit_user, delete_user,
     view_categories, create_category, edit_category, delete_category,
+    view_products, create_product, edit_product, delete_product,
     [key: string]: boolean
 };  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
 
@@ -126,6 +146,13 @@ type Passkey = { id, name, authenticator, created_at_diff, last_used_at_diff };
 ```ts
 type PaginatedData<T> = { data: T[]; current_page, last_page, total, links, ... };
 ```
+
+### `lib/money.ts` — Price formatting
+```ts
+formatCents(cents: number, currency?: string, locale?: string): string
+// e.g. formatCents(2999) → "$29.99"
+```
+Use this for all client-side price display. The raw `price` integer (cents) always travels in JSON; format only at the point of display. The PHP equivalent for server-side use (emails, PDFs) is `App\Support\Money::format(int $cents): string`.
 
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
 
@@ -225,10 +252,10 @@ router.visit(editUser(user).url());     // ✗ TypeError — url is not a functi
 
 ## Named Routes (`@/routes/admin`)
 
-`users` and `categories` are the named exports. Sub-routes are properties attached to each function — they are not separate named exports.
+`users`, `categories`, and `products` are the named exports. Sub-routes are properties attached to each function — they are not separate named exports.
 
 ```ts
-import { users as adminUsersRoute, categories as adminCategoriesRoute } from '@/routes/admin';
+import { users as adminUsersRoute, categories as adminCategoriesRoute, products as adminProductsRoute } from '@/routes/admin';
 
 adminUsersRoute.url()               // GET /admin/users
 adminUsersRoute.show(user).url      // GET /admin/users/{user}
@@ -236,6 +263,8 @@ adminUsersRoute.edit(user).url      // GET /admin/users/{user}/edit
 
 adminCategoriesRoute.url()          // GET /admin/categories
 adminCategoriesRoute.create.url()   // GET /admin/categories/create
+
+adminProductsRoute.url()            // GET /admin/products
 
 import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
 

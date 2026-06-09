@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +54,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::middleware('can:delete_category')->group(function () {
             Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+        });
+
+        Route::middleware('can:view_products')->group(function () {
+            Route::get('products', [ProductController::class, 'index'])->name('products');
         });
     });
 });

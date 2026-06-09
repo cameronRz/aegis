@@ -194,6 +194,10 @@ A string-backed enum that is the single source of truth for permission slugs:
 | `CreateCategory` | `create_category` |
 | `EditCategory` | `edit_category` |
 | `DeleteCategory` | `delete_category` |
+| `ViewProducts` | `view_products` |
+| `CreateProduct` | `create_product` |
+| `EditProduct` | `edit_product` |
+| `DeleteProduct` | `delete_product` |
 
 Adding a new permission: add a case here, add a row in `PermissionSeeder`, and the gate is auto-registered (no manual `AppServiceProvider` edit needed).
 
@@ -293,3 +297,16 @@ Form requests:
 - `AuthorizesRequests` trait is on the base `Controller` class — required for `$this->authorize()` to exist (Laravel 12+ omits it by default)
 
 Password rules differ by environment: production requires 12+ chars, mixed case, numbers, symbols, not compromised.
+
+---
+
+## `Money` Helper (`App\Support\Money`)
+
+Formats a cents integer as a localised currency string for server-side use (emails, PDFs, queue jobs, Artisan output).
+
+```php
+Money::format(int $cents, string $currency = 'USD', string $locale = 'en_US'): string
+// e.g. Money::format(2999) → "$29.99"
+```
+
+Uses PHP's `NumberFormatter` (intl extension). The frontend equivalent is `formatCents()` in `resources/js/lib/money.ts`. Raw cents always travel in JSON; format only at the point of output.

@@ -36,6 +36,10 @@ export type Can = {
     create_category: boolean;
     edit_category: boolean;
     delete_category: boolean;
+    view_products: boolean;
+    create_product: boolean;
+    edit_product: boolean;
+    delete_product: boolean;
     [key: string]: boolean;
 };
 
@@ -47,6 +51,32 @@ export type Category = {
     sort_order: number;
     is_active: boolean;
     parent?: { id: number; name: string } | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type ProductType = 'physical' | 'digital' | 'subscription';
+export type PriceType = 'one_time' | 'recurring';
+export type BillingInterval = 'weekly' | 'monthly' | 'yearly';
+
+export type Product = {
+    id: number;
+    category_id: number | null;
+    name: string;
+    type: ProductType;
+    sku: string;
+    is_active: boolean;
+    description: string;
+    price: number;
+    price_type: PriceType;
+    billing_interval: BillingInterval | null;
+    billing_interval_count: number | null;
+    trial_period_days: number | null;
+    stock_quantity: number | null;
+    track_inventory: boolean;
+    sort_order: number;
+    image: string;
+    category?: { id: number; name: string } | null;
     created_at: string;
     updated_at: string;
 };
