@@ -37,7 +37,8 @@ metadata:
 #### `products/`
 | File | Description |
 |---|---|
-| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` (disabled — not yet wired) |
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
+| `products/show.tsx` | Two-card detail view: Card 1 shows image (if present), name, SKU, type badge, active badge, category, description, Edit button (when `canEdit`), and "Delete product" subtle link (when `canDelete`); Card 2 shows pricing details with type-specific fields (billing interval + trial for subscriptions; inventory tracking for physical). `canEdit` and `canDelete` are computed server-side via `Gate::allows()`. |
 | `products/create.tsx` | Create product form; uses `ProductFormFields`; `sort_order` excluded — auto-assigned server-side; submits with `forceFormData: true` for image upload |
 | `products/edit.tsx` | Edit product form; pre-fills all fields from `product` prop; passes `imageUrl` to `ProductFormFields` as `existingImageUrl`; submits via PATCH with `forceFormData: true` |
 | `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. `remove_image` checkbox shown on edit when `existingImageUrl` is set and no new file is selected; checking it clears the file input and hides the preview. |
@@ -314,6 +315,11 @@ import { edit as editProduct, update as updateProduct } from '@/actions/App/Http
 
 editProduct(product).url            // GET /admin/products/{id}/edit  (string property)
 updateProduct(product).url          // PATCH /admin/products/{id}      (string property)
+
+import { show as showProduct, destroy as destroyProduct } from '@/actions/App/Http/Controllers/ProductController';
+
+showProduct(product).url            // GET /admin/products/{id}        (string property)
+destroyProduct(product).url         // DELETE /admin/products/{id}     (string property)
 
 import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
 

@@ -69,6 +69,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
             Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');
         });
+
+        Route::middleware('can:delete_product')->group(function () {
+            Route::delete('products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        });
+
+        Route::middleware('can:view_products')->group(function () {
+            Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
+        });
     });
 });
 

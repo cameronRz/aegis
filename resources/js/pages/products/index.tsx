@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     create as createProduct,
     edit as editProduct,
+    show as showProduct,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,10 @@ function ProductTypeBadge({ type }: { type: ProductType }) {
 const columnHelper = createColumnHelper<Product>();
 
 type PageProps = { auth: Auth };
+
+function goToProduct(product: Product) {
+    router.visit(showProduct(product).url);
+}
 
 export default function ProductsIndex({ products, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
@@ -174,7 +179,8 @@ export default function ProductsIndex({ products, filters }: Props) {
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        className={!row.original.is_active ? 'opacity-50' : ''}
+                                        className={`cursor-pointer${!row.original.is_active ? ' opacity-50' : ''}`}
+                                        onClick={() => goToProduct(row.original)}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>

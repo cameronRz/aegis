@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,6 +57,16 @@ class ProductController extends Controller
         return redirect()->route('admin.products');
     }
 
+    public function show(Product $product): Response
+    {
+        return Inertia::render('products/show', [
+            'product' => $product->load('category:id,name'),
+            'imageUrl' => $product->image ? Storage::url($product->image) : null,
+            'canEdit' => Gate::allows('edit_product'),
+            'canDelete' => Gate::allows('delete_product'),
+        ]);
+    }
+
     public function edit(Product $product): Response
     {
         return Inertia::render('products/edit', [
@@ -87,6 +98,13 @@ class ProductController extends Controller
         }
 
         $product->update($data);
+
+        return redirect()->route('admin.products.show', $product);
+    }
+
+    public function destroy(Product $product): RedirectResponse
+    {
+        $product->delete();
 
         return redirect()->route('admin.products');
     }

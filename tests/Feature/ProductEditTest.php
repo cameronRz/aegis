@@ -84,7 +84,7 @@ it('updates a product and redirects', function () {
             'is_active' => true,
             'remove_image' => false,
         ])
-        ->assertRedirect('/admin/products');
+        ->assertRedirect("/admin/products/{$this->product->id}");
 
     expect($this->product->fresh()->name)->toBe('Updated Widget');
     expect($this->product->fresh()->price)->toBe(4999);
@@ -103,7 +103,7 @@ it('enforces unique SKU ignoring the current product', function () {
             'is_active' => true,
             'remove_image' => false,
         ])
-        ->assertRedirect('/admin/products');
+        ->assertRedirect("/admin/products/{$this->product->id}");
 });
 
 it('rejects a duplicate SKU from another product', function () {
