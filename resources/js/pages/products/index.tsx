@@ -9,11 +9,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
     create as createProduct,
+    destroy as destroyProduct,
     edit as editProduct,
     show as showProduct,
 } from '@/actions/App/Http/Controllers/ProductController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -60,6 +69,11 @@ export default function ProductsIndex({ products, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const isFirstRender = useRef(true);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const canEdit = auth.can.edit_product;
+    const canDelete = auth.can.delete_product;
 
     const columns = useMemo(
         () => [
@@ -81,28 +95,42 @@ export default function ProductsIndex({ products, filters }: Props) {
                         <span className="text-muted-foreground">—</span>
                     ),
             }),
-            ...(auth.can.edit_product
+            ...(canEdit || canDelete
                 ? [
                       columnHelper.display({
                           id: 'actions',
                           header: '',
                           cell: ({ row }) => (
-                              <div className="flex justify-end">
-                                  <Button
-                                      variant="outline"
-                                      size="sm"
-                                      asChild
-                                      onClick={(e) => e.stopPropagation()}
-                                  >
-                                      <Link href={editProduct(row.original).url}>Edit</Link>
-                                  </Button>
+                              <div className="flex justify-end gap-2">
+                                  {canEdit && (
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          asChild
+                                          onClick={(e) => e.stopPropagation()}
+                                      >
+                                          <Link href={editProduct(row.original).url}>Edit</Link>
+                                      </Button>
+                                  )}
+                                  {canDelete && (
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              setProductToDelete(row.original);
+                                          }}
+                                      >
+                                          Delete
+                                      </Button>
+                                  )}
                               </div>
                           ),
                       }),
                   ]
                 : []),
         ],
-        [auth.can.edit_product],
+        [canEdit, canDelete],
     );
 
     useEffect(() => {
@@ -129,6 +157,20 @@ export default function ProductsIndex({ products, filters }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+
+    function handleDelete() {
+        if (!productToDelete) return;
+
+        setDeleting(true);
+
+        router.delete(destroyProduct(productToDelete).url, {
+            onSuccess: () => {
+                setProductToDelete(null);
+                setDeleting(false);
+            },
+            onError: () => setDeleting(false),
+        });
+    }
 
     function goToPage(url: string | null) {
         // eslint-disable-next-line
@@ -254,6 +296,30 @@ export default function ProductsIndex({ products, filters }: Props) {
                     </div>
                 </div>
             </div>
+            <Dialog
+                open={productToDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setProductToDelete(null);
+                }}
+            >
+                <DialogContent aria-describedby={undefined}>
+                    <DialogTitle>Delete Product</DialogTitle>
+                    <Alert variant="destructive">
+                        <AlertTitle>Are you sure?</AlertTitle>
+                        <AlertDescription>
+                            <strong>{productToDelete?.name}</strong> will be moved to the trash.
+                        </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
