@@ -7,7 +7,10 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { create as createProduct } from '@/actions/App/Http/Controllers/ProductController';
+import {
+    create as createProduct,
+    edit as editProduct,
+} from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,15 +80,15 @@ export default function ProductsIndex({ products, filters }: Props) {
                       columnHelper.display({
                           id: 'actions',
                           header: '',
-                          cell: () => (
+                          cell: ({ row }) => (
                               <div className="flex justify-end">
                                   <Button
                                       variant="outline"
                                       size="sm"
-                                      disabled
+                                      asChild
                                       onClick={(e) => e.stopPropagation()}
                                   >
-                                      Edit
+                                      <Link href={editProduct(row.original).url}>Edit</Link>
                                   </Button>
                               </div>
                           ),

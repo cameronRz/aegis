@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-
 import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -28,6 +27,7 @@ export type ProductFormData = {
     track_inventory: boolean;
     is_active: boolean;
     image: File | null;
+    remove_image: boolean;
 };
 
 export type ProductCategory = { id: number; name: string };
@@ -81,16 +81,31 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
         }
     }
 
-    function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    function handleImageChange(e: { target: HTMLInputElement }) {
         const file = e.target.files?.[0] ?? null;
 
         if (previewUrl) URL.revokeObjectURL(previewUrl);
 
         setData('image', file);
+        setData('remove_image', false);
         setPreviewUrl(file ? URL.createObjectURL(file) : null);
     }
 
-    const displayImageUrl = previewUrl ?? existingImageUrl ?? null;
+    function handleRemoveImageChange(checked: boolean) {
+        setData('remove_image', checked);
+
+        if (checked) {
+            setData('image', null);
+
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+            setPreviewUrl(null);
+
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    }
+
+    const displayImageUrl = data.remove_image ? null : (previewUrl ?? existingImageUrl ?? null);
     const isSubscription = data.type === 'subscription';
     const isPhysical = data.type === 'physical';
 
@@ -207,7 +222,7 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
                         value={priceDisplay}
                         onChange={(e) => {
                             const val = e.target.value;
-                            // Extra decimal protection
+
                             if (!/^\d*\.?\d*$/.test(val)) return;
 
                             setPriceDisplay(val);
@@ -258,10 +273,7 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
                                 min="1"
                                 value={data.billing_interval_count ?? 1}
                                 onChange={(e) =>
-                                    setData(
-                                        'billing_interval_count',
-                                        parseInt(e.target.value) || 1,
-                                    )
+                                    setData('billing_interval_count', parseInt(e.target.value) || 1)
                                 }
                             />
                             <InputError message={errors.billing_interval_count} />
@@ -271,7 +283,7 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
                     <div className="grid gap-2">
                         <Label htmlFor="trial_period_days">
                             Trial Period{' '}
-                            <span className="text-muted-foreground font-normal">(days, optional)</span>
+                            <span className="font-normal text-muted-foreground">(days, optional)</span>
                         </Label>
                         <Input
                             id="trial_period_days"
@@ -337,7 +349,7 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
             {/* Image */}
             <div className="grid gap-2">
                 <Label htmlFor="image">
-                    Image <span className="text-muted-foreground font-normal">(optional)</span>
+                    Image <span className="font-normal text-muted-foreground">(optional)</span>
                 </Label>
                 {displayImageUrl && (
                     <img
@@ -345,6 +357,18 @@ export function ProductFormFields({ data, setData, errors, categories, existingI
                         alt="Product preview"
                         className="h-32 w-32 rounded-md object-cover"
                     />
+                )}
+                {existingImageUrl && !data.image && (
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="remove_image"
+                            checked={data.remove_image}
+                            onCheckedChange={(checked) => handleRemoveImageChange(checked === true)}
+                        />
+                        <Label htmlFor="remove_image" className="font-normal text-muted-foreground">
+                            Remove image
+                        </Label>
+                    </div>
                 )}
                 <input
                     ref={fileInputRef}

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,6 +52,41 @@ class ProductController extends Controller
             ...$request->safe()->except('image'),
             'image' => $imagePath,
         ]);
+
+        return redirect()->route('admin.products');
+    }
+
+    public function edit(Product $product): Response
+    {
+        return Inertia::render('products/edit', [
+            'product' => $product,
+            'categories' => Category::query()->ordered()->get(['id', 'name']),
+            'imageUrl' => $product->image ? Storage::url($product->image) : null,
+        ]);
+    }
+
+    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
+    {
+        $data = $request->safe()->except(['image', 'remove_image']);
+
+        // Reset sort_order when moving to a different category
+        if ($data['category_id'] !== $product->category_id) {
+            $data['sort_order'] = (int) Product::where('category_id', $data['category_id'])->max('sort_order') + 1;
+        }
+
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = $request->file('image')->store('products', 'public');
+        } elseif ($request->boolean('remove_image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = null;
+        }
+
+        $product->update($data);
 
         return redirect()->route('admin.products');
     }

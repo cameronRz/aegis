@@ -64,6 +64,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
             Route::post('products', [ProductController::class, 'store'])->name('products.store');
         });
+
+        Route::middleware('can:edit_product')->group(function () {
+            Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+            Route::patch('products/{product}', [ProductController::class, 'update'])->name('products.update');
+        });
     });
 });
 
