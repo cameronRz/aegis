@@ -121,7 +121,6 @@ export default function ProductsTrash({ products, filters }: Props) {
     );
 
     useEffect(() => {
-        // eslint-disable-next-line curly
         if (search === (filters.search ?? '')) return;
 
         const timer = setTimeout(() => {
@@ -143,14 +142,12 @@ export default function ProductsTrash({ products, filters }: Props) {
     });
 
     function goToPage(url: string | null) {
-        // eslint-disable-next-line
         if (!url) return;
 
         router.get(url, {}, { preserveState: true });
     }
 
     function handleForceDelete() {
-        // eslint-disable-next-line curly
         if (!productToDelete) return;
 
         setDeleting(true);

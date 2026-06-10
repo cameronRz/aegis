@@ -118,7 +118,6 @@ export default function UsersIndex({ users, filters }: Props) {
     });
 
     function goToPage(url: string | null) {
-        // eslint-disable-next-line
         if (!url) return;
 
         router.get(url, {}, { preserveState: true });

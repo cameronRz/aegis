@@ -33,8 +33,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
-import { trash as productsTrashRoute } from '@/routes/admin/products';
 import { products as adminProductsRoute } from '@/routes/admin';
+import { trash as productsTrashRoute } from '@/routes/admin/products';
 import { PRIVILEGED_ROLES } from '@/types';
 import type { Auth, PaginatedData, Product, ProductType, Role } from '@/types';
 
@@ -169,7 +169,6 @@ export default function ProductsIndex({ products, filters }: Props) {
     }
 
     function goToPage(url: string | null) {
-        // eslint-disable-next-line
         if (!url) return;
 
         router.get(url, {}, { preserveState: true });
