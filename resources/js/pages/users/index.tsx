@@ -5,7 +5,7 @@ import {
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { create as createUser, edit as editUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +55,6 @@ type PageProps = { auth: Auth };
 export default function UsersIndex({ users, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
-    const isFirstRender = useRef(true);
 
     const canEditRow = (target: User) =>
         auth.can.edit_user &&
@@ -98,11 +97,7 @@ export default function UsersIndex({ users, filters }: Props) {
     );
 
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-
-            return;
-        }
+        if (search === (filters.search ?? '')) return;
 
         const timer = setTimeout(() => {
             router.get(
@@ -113,7 +108,7 @@ export default function UsersIndex({ users, filters }: Props) {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search]);
+    }, [search, filters.search]);
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({

@@ -5,7 +5,7 @@ import {
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
     create as createProduct,
@@ -68,7 +68,6 @@ function goToProduct(product: Product) {
 export default function ProductsIndex({ products, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
-    const isFirstRender = useRef(true);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [deleting, setDeleting] = useState(false);
 
@@ -134,11 +133,7 @@ export default function ProductsIndex({ products, filters }: Props) {
     );
 
     useEffect(() => {
-        if (isFirstRender.current) {
-            isFirstRender.current = false;
-
-            return;
-        }
+        if (search === (filters.search ?? '')) return;
 
         const timer = setTimeout(() => {
             router.get(
@@ -149,7 +144,7 @@ export default function ProductsIndex({ products, filters }: Props) {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [search]);
+    }, [search, filters.search]);
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
