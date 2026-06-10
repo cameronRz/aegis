@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     createColumnHelper,
     flexRender,
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
 import { products as adminProductsRoute } from '@/routes/admin';
-import type { Auth, PaginatedData, Product, ProductType } from '@/types';
+import type { PaginatedData, Product, ProductType } from '@/types';
 
 type Props = {
     products: PaginatedData<Product>;
@@ -58,10 +58,7 @@ function formatDeletedAt(dateString: string): string {
 
 const columnHelper = createColumnHelper<Product>();
 
-type PageProps = { auth: Auth };
-
 export default function ProductsTrash({ products, filters }: Props) {
-    usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -74,6 +71,7 @@ export default function ProductsTrash({ products, filters }: Props) {
                 header: 'Type',
                 cell: ({ getValue }) => {
                     const { label, variant } = typeConfig[getValue()];
+
                     return <Badge variant={variant}>{label}</Badge>;
                 },
             }),
