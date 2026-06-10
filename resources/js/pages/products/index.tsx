@@ -6,7 +6,6 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useState } from 'react';
-
 import {
     create as createProduct,
     destroy as destroyProduct,

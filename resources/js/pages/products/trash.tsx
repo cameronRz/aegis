@@ -6,7 +6,6 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useState } from 'react';
-
 import {
     forceDestroy as forceDestroyProduct,
     restore as restoreProduct,
@@ -31,8 +30,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
-import { trash as productsTrashRoute } from '@/routes/admin/products';
 import { products as adminProductsRoute } from '@/routes/admin';
+import { trash as productsTrashRoute } from '@/routes/admin/products';
 import type { PaginatedData, Product, ProductType } from '@/types';
 
 type Props = {
