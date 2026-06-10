@@ -29,6 +29,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { create as categoriesCreateRoute } from '@/routes/admin/categories';
 import { categories as adminCategoriesRoute } from '@/routes/admin';
 import type { Auth, Category, PaginatedData } from '@/types';
 
@@ -159,7 +160,7 @@ export default function CategoriesIndex({ categories, filters }: Props) {
                     />
                     {auth.can.create_category && (
                         <Button asChild>
-                            <Link href={adminCategoriesRoute.create.url()}>Create Category</Link>
+                            <Link href={categoriesCreateRoute.url()}>Create Category</Link>
                         </Button>
                     )}
                 </div>

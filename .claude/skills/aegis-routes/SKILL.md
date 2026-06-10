@@ -58,6 +58,24 @@ PUT    /settings/password       → user-password.update                 (thrott
 GET    /settings/appearance     → appearance.edit                      (auth + verified)
 ```
 
+## Wayfinder Import Pattern
+
+Named exports from `@/routes/admin` (e.g. `products`, `categories`, `users`) only carry the base function's type. Sub-routes (`.trash`, `.create`, `.edit`, etc.) are merged onto the default export via `Object.assign` and are **not** visible to TypeScript on the named export.
+
+Import sub-routes directly from their sub-module:
+
+```ts
+// ✗ TS error — .trash not on the named export type
+import { products } from '@/routes/admin';
+products.trash.url();
+
+// ✓ import the sub-route directly from the sub-module
+import { trash } from '@/routes/admin/products';
+trash.url();
+```
+
+Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
+
 ## Fortify Auth Routes (auto-registered)
 
 Fortify registers all auth routes automatically: login, register, password reset, email verification, 2FA, passkeys, confirm password.

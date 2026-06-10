@@ -31,6 +31,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
+import { trash as productsTrashRoute } from '@/routes/admin/products';
 import { products as adminProductsRoute } from '@/routes/admin';
 import type { PaginatedData, Product, ProductType } from '@/types';
 
@@ -120,11 +121,12 @@ export default function ProductsTrash({ products, filters }: Props) {
     );
 
     useEffect(() => {
+        // eslint-disable-next-line curly
         if (search === (filters.search ?? '')) return;
 
         const timer = setTimeout(() => {
             router.get(
-                adminProductsRoute.trash.url(),
+                productsTrashRoute.url(),
                 { search: search || undefined },
                 { preserveState: true, replace: true },
             );
@@ -148,6 +150,7 @@ export default function ProductsTrash({ products, filters }: Props) {
     }
 
     function handleForceDelete() {
+        // eslint-disable-next-line curly
         if (!productToDelete) return;
 
         setDeleting(true);

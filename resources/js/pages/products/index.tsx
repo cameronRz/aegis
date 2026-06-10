@@ -33,6 +33,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formatCents } from '@/lib/money';
+import { trash as productsTrashRoute } from '@/routes/admin/products';
 import { products as adminProductsRoute } from '@/routes/admin';
 import { PRIVILEGED_ROLES } from '@/types';
 import type { Auth, PaginatedData, Product, ProductType, Role } from '@/types';
@@ -192,7 +193,7 @@ export default function ProductsIndex({ products, filters }: Props) {
                     <div className="flex items-center gap-3">
                         {PRIVILEGED_ROLES.includes(auth.user.role as Role) && (
                             <Link
-                                href={adminProductsRoute.trash.url()}
+                                href={productsTrashRoute.url()}
                                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                             >
                                 View Trash
