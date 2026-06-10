@@ -30,7 +30,7 @@ The app is a classic Inertia SPA: Laravel handles routing, auth, and data; React
 
 Detailed domain knowledge is in project skills — activate them when working in that area:
 
-- **`aegis-models`** — User/Permission models, Role enum, gates, `user_permissions` pivot, database tables, Fortify auth config, form validation
+- **`aegis-models`** — User/Permission/Category models, Role and PermissionName enums, Sortable trait, gates, `user_permissions` pivot, database tables, Fortify auth config, form validation
 - **`aegis-routes`** — All route definitions with middleware and named route index
 - **`aegis-frontend`** — React pages, component catalog, TypeScript types, Inertia shared props, Tailwind design tokens
 

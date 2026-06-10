@@ -16,13 +16,33 @@ metadata:
 | `welcome.tsx` | Public landing page with auth links |
 | `dashboard.tsx` | Authenticated home; placeholder grid (3-col desktop) |
 
-### Admin pages (`users/`)
+### Admin pages
+
+#### `users/`
 | File | Description |
 |---|---|
 | `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
 | `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
 | `users/edit.tsx` | Edit user form: same fields/permission UI as create, pre-filled with existing user data; uses PATCH; self-editing blocked (403) |
+
+#### `categories/`
+| File | Description |
+|---|---|
+| `categories/index.tsx` | Category list with search (name/slug), pagination (15/page), parent name column; "Create Category" button shown when `auth.can.create_category`; Edit/Delete action buttons per row shown when `auth.can.edit_category` / `auth.can.delete_category`; single shared delete Dialog populated by row state |
+| `categories/create.tsx` | Create category form; uses `CategoryFormFields`; `sort_order` is auto-assigned server-side and not shown |
+| `categories/edit.tsx` | Edit category form; pre-fills from `category` prop; uses PATCH via `update(category).url`; uses `CategoryFormFields`; parent options exclude the category itself (server-side) |
+| `categories/category-form-fields.tsx` | **Shared domain component** — exports `CategoryFormData` type, `ParentCategory` type, and `CategoryFormFields` component. Owns slug auto-sync logic (`slugAutoSync` ref starts `true` when slug is empty → auto-generates from name; becomes `false` once user edits slug or on edit page where slug is pre-filled). Used by both `create.tsx` and `edit.tsx`. |
+
+#### `products/`
+| File | Description |
+|---|---|
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "View Trash" subtle link shown for admins (`PRIVILEGED_ROLES`); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
+| `products/show.tsx` | Two-card detail view: Card 1 shows image (if present), name, SKU, type badge, active badge, category, description, Edit button (when `canEdit`), and "Delete product" subtle link (when `canDelete`); Card 2 shows pricing details with type-specific fields (billing interval + trial for subscriptions; inventory tracking for physical). `canEdit` and `canDelete` are computed server-side via `Gate::allows()`. |
+| `products/trash.tsx` | Admin-only trash bin: paginated table of soft-deleted products with Name, SKU, Type badge, Price, Deleted date columns. Restore button (POST, no confirmation). Permanently Delete button opens a confirmation Dialog. Search by name/SKU. "Products" breadcrumb links back to the index. |
+| `products/create.tsx` | Create product form; uses `ProductFormFields`; `sort_order` excluded — auto-assigned server-side; submits with `forceFormData: true` for image upload |
+| `products/edit.tsx` | Edit product form; pre-fills all fields from `product` prop; passes `imageUrl` to `ProductFormFields` as `existingImageUrl`; submits via PATCH with `forceFormData: true` |
+| `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. `remove_image` checkbox shown on edit when `existingImageUrl` is set and no new file is selected; checking it clears the file input and hides the preview. |
 
 ### Settings pages (`settings/`)
 | File | Description |
@@ -41,6 +61,8 @@ metadata:
 | `auth/verify-email.tsx` | Email verification prompt |
 | `auth/two-factor-challenge.tsx` | TOTP code entry during login |
 | `auth/confirm-password.tsx` | Re-confirm password for sensitive actions |
+
+**React 19 type convention:** Do not use `React.FormEvent`, `React.ChangeEvent`, etc. — the `React` namespace is deprecated in React 19. Either use inline arrow functions so TypeScript infers the event type from the prop, or import named types directly (`import type { FormEvent } from 'react'`).
 
 **Page conventions:**
 - Each page sets a `.layout` property that passes breadcrumbs and titles to the app layout
@@ -61,7 +83,7 @@ metadata:
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |
@@ -94,7 +116,33 @@ type User = {
     created_at, updated_at
 };
 
-type Can = { view_users: boolean; create_user: boolean; edit_user: boolean; delete_user: boolean; [key: string]: boolean };  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
+type Category = {
+    id: number; parent_id: number | null; name: string; slug: string;
+    sort_order: number; is_active: boolean;
+    parent?: { id: number; name: string } | null;
+    created_at: string; updated_at: string;
+};
+
+type ProductType = 'physical' | 'digital' | 'subscription';
+type PriceType = 'one_time' | 'recurring';
+type BillingInterval = 'weekly' | 'monthly' | 'yearly';
+
+type Product = {
+    id: number; category_id: number | null; name: string; type: ProductType;
+    sku: string; is_active: boolean; description: string; price: number;  // cents
+    price_type: PriceType; billing_interval: BillingInterval | null;
+    billing_interval_count: number | null; trial_period_days: number | null;
+    stock_quantity: number | null; track_inventory: boolean; sort_order: number;
+    image: string | null; category?: { id: number; name: string } | null;
+    deleted_at: string | null; created_at: string; updated_at: string;
+};
+
+type Can = {
+    view_users, create_user, edit_user, delete_user,
+    view_categories, create_category, edit_category, delete_category,
+    view_products, create_product, edit_product, delete_product,
+    [key: string]: boolean
+};  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
 
 type Auth = { user: User; can: Can };
 
@@ -105,6 +153,13 @@ type Passkey = { id, name, authenticator, created_at_diff, last_used_at_diff };
 ```ts
 type PaginatedData<T> = { data: T[]; current_page, last_page, total, links, ... };
 ```
+
+### `lib/money.ts` — Price formatting
+```ts
+formatCents(cents: number, currency?: string, locale?: string): string
+// e.g. formatCents(2999) → "$29.99"
+```
+Use this for all client-side price display. The raw `price` integer (cents) always travels in JSON; format only at the point of display. The PHP equivalent for server-side use (emails, PDFs) is `App\Support\Money::format(int $cents): string`.
 
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
 
@@ -155,6 +210,71 @@ There is **no `AlertDialog`** component in this UI library. Do not try to add or
 
 ---
 
+## Select with Nullable Values
+
+Radix UI's `SelectItem` does not allow an empty string `value` — it is reserved internally to mean "clear/show placeholder". For optional foreign-key selects (e.g. `parent_id: number | null`), use a `"none"` sentinel:
+
+```tsx
+<Select
+    value={data.parent_id?.toString() ?? 'none'}
+    onValueChange={(value) =>
+        setData('parent_id', value === 'none' ? null : Number(value))
+    }
+>
+    <SelectTrigger>
+        <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="none">None</SelectItem>
+        {items.map((item) => (
+            <SelectItem key={item.id} value={item.id.toString()}>{item.name}</SelectItem>
+        ))}
+    </SelectContent>
+</Select>
+```
+
+The form state stores `number | null`; the Select converts via the sentinel. Do not use `value=""` on any `SelectItem`.
+
+---
+
+## File Uploads
+
+When a form includes a file, pass `{ forceFormData: true }` to `post()`:
+```tsx
+post(storeProduct.url(), { forceFormData: true });
+```
+Store the file as `File | null` in `useForm` state. Image previews use a local `useState<string | null>` for the object URL — always revoke it in a `useEffect` cleanup to avoid memory leaks:
+```tsx
+useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+```
+On the backend, store with `$request->file('image')->store('products', 'public')` and guard with `$request->hasFile('image')` before calling `->store()` when the field is nullable.
+
+## Price Inputs (cents → dollars)
+
+Never use a fully controlled `type="number"` input with a formatted value — it fights the browser cursor and causes digits to increment rather than append. The established pattern:
+
+```tsx
+// Local display state — not reformatted on every keystroke
+const [priceDisplay, setPriceDisplay] = useState(data.price > 0 ? (data.price / 100).toFixed(2) : '');
+
+<Input
+    type="text"
+    inputMode="decimal"
+    placeholder="0.00"
+    value={priceDisplay}
+    onChange={(e) => {
+        const val = e.target.value;
+        if (!/^\d*\.?\d*$/.test(val)) return;  // reject non-numeric
+        setPriceDisplay(val);
+        setData('price', isNaN(parseFloat(val)) ? 0 : Math.round(parseFloat(val) * 100));
+    }}
+    onBlur={() => setPriceDisplay(data.price > 0 ? (data.price / 100).toFixed(2) : '')}
+/>
+```
+`type="text"` + `inputMode="decimal"` gives the mobile numeric keyboard without the browser stepping behaviour. Normalise to 2dp only on blur.
+
+---
+
 ## Wayfinder URL Patterns
 
 Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
@@ -177,17 +297,46 @@ router.visit(editUser(user).url());     // ✗ TypeError — url is not a functi
 
 ## Named Routes (`@/routes/admin`)
 
-`users` is the **only named export**. Sub-routes (`show`, `edit`, `create`, `store`, `update`, `permissions`) are properties attached to the `users` function — they are not separate named exports.
+`users`, `categories`, and `products` are the named exports. Sub-routes are properties attached to each function — they are not separate named exports.
 
 ```ts
-import { users as adminUsersRoute } from '@/routes/admin';
+import { users as adminUsersRoute, categories as adminCategoriesRoute, products as adminProductsRoute } from '@/routes/admin';
 
 adminUsersRoute.url()               // GET /admin/users
 adminUsersRoute.show(user).url      // GET /admin/users/{user}
 adminUsersRoute.edit(user).url      // GET /admin/users/{user}/edit
+
+adminCategoriesRoute.url()          // GET /admin/categories
+adminCategoriesRoute.create.url()   // GET /admin/categories/create
+
+adminProductsRoute.url()            // GET /admin/products
+adminProductsRoute.create.url()     // GET /admin/products/create
+
+import { edit as editProduct, update as updateProduct } from '@/actions/App/Http/Controllers/ProductController';
+
+editProduct(product).url            // GET /admin/products/{id}/edit  (string property)
+updateProduct(product).url          // PATCH /admin/products/{id}      (string property)
+
+import { show as showProduct, destroy as destroyProduct } from '@/actions/App/Http/Controllers/ProductController';
+
+showProduct(product).url            // GET /admin/products/{id}        (string property)
+destroyProduct(product).url         // DELETE /admin/products/{id}     (string property)
+
+import { trash as trashProducts, restore as restoreProduct, forceDestroy as forceDestroyProduct } from '@/actions/App/Http/Controllers/ProductController';
+
+trashProducts.url()                 // GET /admin/products/trash        (no-arg, method on function)
+adminProductsRoute.trash.url()      // same, via named route
+restoreProduct(product).url         // POST /admin/products/{id}/restore (string property)
+forceDestroyProduct(product).url    // DELETE /admin/products/{id}/force (string property)
+
+import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
+
+editCategory(category).url          // GET /admin/categories/{id}/edit  (string property)
+updateCategory(category).url        // PATCH /admin/categories/{id}      (string property)
+destroyCategory(category).url       // DELETE /admin/categories/{id}     (string property)
 ```
 
-Destructuring `show` or `edit` directly from `@/routes/admin` yields `undefined`.
+Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admin` yields `undefined` — always access them as properties on the parent route function.
 
 ---
 

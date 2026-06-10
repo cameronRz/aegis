@@ -7,9 +7,19 @@ import {
 } from '@tanstack/react-table';
 import { useEffect, useMemo, useState } from 'react';
 
-import { create as createUser, edit as editUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
-import { Badge } from '@/components/ui/badge';
+import {
+    destroy as destroyCategory,
+    edit as editCategory,
+} from '@/actions/App/Http/Controllers/CategoryController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -19,81 +29,76 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { users as adminUsersRoute } from '@/routes/admin';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Auth, PaginatedData, Role, User } from '@/types';
-
-function goToUser(user: User) {
-    router.visit(showUser(user).url);
-}
+import { create as categoriesCreateRoute } from '@/routes/admin/categories';
+import { categories as adminCategoriesRoute } from '@/routes/admin';
+import type { Auth, Category, PaginatedData } from '@/types';
 
 type Props = {
-    users: PaginatedData<User>;
+    categories: PaginatedData<Category>;
     filters: { search?: string };
 };
 
-const roleConfig: Record<
-    Role,
-    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-    site_admin: { label: 'Site Admin', variant: 'destructive' },
-    admin: { label: 'Admin', variant: 'default' },
-    manager: { label: 'Manager', variant: 'secondary' },
-    user: { label: 'User', variant: 'outline' },
-};
-
-function RoleBadge({ role }: { role: Role }) {
-    const { label, variant } = roleConfig[role];
-
-    return <Badge variant={variant}>{label}</Badge>;
-}
-
-const columnHelper = createColumnHelper<User>();
+const columnHelper = createColumnHelper<Category>();
 
 type PageProps = { auth: Auth };
 
-export default function UsersIndex({ users, filters }: Props) {
+export default function CategoriesIndex({ categories, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
-    const canEditRow = (target: User) =>
-        auth.can.edit_user &&
-        auth.user.id !== target.id &&
-        (auth.user.role === 'site_admin' || !PRIVILEGED_ROLES.includes(target.role as Role));
+    const canEdit = auth.can.edit_category;
+    const canDelete = auth.can.delete_category;
 
     const columns = useMemo(
         () => [
-            columnHelper.accessor('first_name', { header: 'First Name' }),
-            columnHelper.accessor('last_name', { header: 'Last Name' }),
-            columnHelper.accessor('email', { header: 'Email' }),
-            columnHelper.accessor('role', {
-                header: 'Role',
-                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            columnHelper.accessor('name', { header: 'Name' }),
+            columnHelper.accessor('slug', { header: 'Slug' }),
+            columnHelper.display({
+                id: 'parent',
+                header: 'Parent',
+                cell: ({ row }) =>
+                    row.original.parent?.name ?? (
+                        <span className="text-muted-foreground">—</span>
+                    ),
             }),
-            ...(auth.can.edit_user
+            ...(canEdit || canDelete
                 ? [
                       columnHelper.display({
                           id: 'actions',
                           header: '',
-                          cell: ({ row }) =>
-                              canEditRow(row.original) ? (
-                                  <div className="flex justify-end">
+                          cell: ({ row }) => (
+                              <div className="flex justify-end gap-2">
+                                  {canEdit && (
                                       <Button
                                           variant="outline"
                                           size="sm"
                                           asChild
                                           onClick={(e) => e.stopPropagation()}
                                       >
-                                          <Link href={editUser(row.original).url}>Edit</Link>
+                                          <Link href={editCategory(row.original).url}>Edit</Link>
                                       </Button>
-                                  </div>
-                              ) : null,
+                                  )}
+                                  {canDelete && (
+                                      <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCategoryToDelete(row.original);
+                                          }}
+                                      >
+                                          Delete
+                                      </Button>
+                                  )}
+                              </div>
+                          ),
                       }),
                   ]
                 : []),
         ],
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [auth.can.edit_user, auth.user.id, auth.user.role],
+        [canEdit, canDelete],
     );
 
     useEffect(() => {
@@ -101,7 +106,7 @@ export default function UsersIndex({ users, filters }: Props) {
 
         const timer = setTimeout(() => {
             router.get(
-                adminUsersRoute.url(),
+                adminCategoriesRoute.url(),
                 { search: search || undefined },
                 { preserveState: true, replace: true },
             );
@@ -112,7 +117,7 @@ export default function UsersIndex({ users, filters }: Props) {
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
-        data: users.data,
+        data: categories.data,
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
@@ -123,24 +128,38 @@ export default function UsersIndex({ users, filters }: Props) {
         router.get(url, {}, { preserveState: true });
     }
 
-    const pageLinks = users.links.filter(
+    function handleDelete() {
+        if (!categoryToDelete) return;
+
+        setDeleting(true);
+
+        router.delete(destroyCategory(categoryToDelete).url, {
+            onSuccess: () => {
+                setCategoryToDelete(null);
+                setDeleting(false);
+            },
+            onError: () => setDeleting(false),
+        });
+    }
+
+    const pageLinks = categories.links.filter(
         (link) => link.label !== '&laquo; Previous' && link.label !== 'Next &raquo;',
     );
 
     return (
         <>
-            <Head title="Users" />
+            <Head title="Categories" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <Input
-                        placeholder="Search by name or email..."
+                        placeholder="Search by name or slug..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-sm"
                     />
-                    {auth.can.create_user && (
+                    {auth.can.create_category && (
                         <Button asChild>
-                            <Link href={createUser.url()}>Create User</Link>
+                            <Link href={categoriesCreateRoute.url()}>Create Category</Link>
                         </Button>
                     )}
                 </div>
@@ -164,11 +183,7 @@ export default function UsersIndex({ users, filters }: Props) {
                         <TableBody>
                             {table.getRowModel().rows.length ? (
                                 table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="cursor-pointer"
-                                        onClick={() => goToUser(row.original)}
-                                    >
+                                    <TableRow key={row.id}>
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
                                                 {flexRender(
@@ -185,7 +200,7 @@ export default function UsersIndex({ users, filters }: Props) {
                                         colSpan={columns.length}
                                         className="h-24 text-center"
                                     >
-                                        No users found.
+                                        No categories found.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -195,16 +210,16 @@ export default function UsersIndex({ users, filters }: Props) {
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                        {users.from
-                            ? `Showing ${users.from}–${users.to} of ${users.total}`
+                        {categories.from
+                            ? `Showing ${categories.from}–${categories.to} of ${categories.total}`
                             : 'No results'}
                     </span>
                     <div className="flex items-center gap-1">
                         <Button
                             variant="outline"
                             size="sm"
-                            disabled={!users.prev_page_url}
-                            onClick={() => goToPage(users.prev_page_url)}
+                            disabled={!categories.prev_page_url}
+                            onClick={() => goToPage(categories.prev_page_url)}
                         >
                             Previous
                         </Button>
@@ -222,18 +237,42 @@ export default function UsersIndex({ users, filters }: Props) {
                         <Button
                             variant="outline"
                             size="sm"
-                            disabled={!users.next_page_url}
-                            onClick={() => goToPage(users.next_page_url)}
+                            disabled={!categories.next_page_url}
+                            onClick={() => goToPage(categories.next_page_url)}
                         >
                             Next
                         </Button>
                     </div>
                 </div>
             </div>
+
+            <Dialog
+                open={categoryToDelete !== null}
+                onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+            >
+                <DialogContent aria-describedby={undefined}>
+                    <DialogTitle>Delete Category</DialogTitle>
+                    <Alert variant="destructive">
+                        <AlertTitle>Are you sure?</AlertTitle>
+                        <AlertDescription>
+                            <strong>{categoryToDelete?.name}</strong> will be permanently deleted.
+                            Child categories will become root categories.
+                        </AlertDescription>
+                    </Alert>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
-UsersIndex.layout = {
-    breadcrumbs: [{ title: 'Users', href: adminUsersRoute.url() }],
+CategoriesIndex.layout = {
+    breadcrumbs: [{ title: 'Categories', href: adminCategoriesRoute.url() }],
 };

@@ -122,7 +122,7 @@ export default [
             '@stylistic': stylistic,
         },
         rules: {
-            curly: ['error', 'all'],
+            curly: ['error', 'multi-line'],
             '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
         },
     },
