@@ -61,3 +61,7 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 - **Pagination** — use `PaginatedData<T>` type for paginated responses; 15 per page standard
 - **Permissions via `PermissionName` enum** — permission names are cases on `App\Enum\PermissionName` (e.g. `PermissionName::EditUser`). Adding a new permission requires: a new enum case, a gate in `AppServiceProvider` (auto-registered via `PermissionName::cases()` loop), and a corresponding row in `PermissionSeeder`. The `->value` is the slug stored in the `permissions` table `name` column.
 - **Pivot audit trail** — `granted_by` on `user_permissions` tracks who granted each permission; follow this pattern for future auditable pivots
+- **Index pages** — use `DataTable` + `DataTablePagination` components and the `useDebouncedSearch` hook; do not inline the TanStack table rendering, pagination buttons, or debounce logic
+- **Destructive confirmations** — always use `ConfirmDialog` from `@/components/confirm-dialog`; do not inline the `Dialog + Alert[destructive]` pattern
+- **Role assignment logic** — call `$user->assignableRoles()` (returns `Role[]`); never re-derive inline
+- **Product search** — use `->search($request->input('search'))` scope on the `Product` query builder

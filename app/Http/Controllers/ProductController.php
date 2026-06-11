@@ -19,13 +19,7 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->with('category:id,name')
-            ->when(
-                $request->input('search'),
-                fn ($query, string $search) => $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%");
-                })
-            )
+            ->search($request->input('search'))
             ->ordered()
             ->paginate(15)
             ->withQueryString();
@@ -40,13 +34,7 @@ class ProductController extends Controller
     {
         $products = Product::onlyTrashed()
             ->with('category:id,name')
-            ->when(
-                $request->input('search'),
-                fn ($query, string $search) => $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%");
-                })
-            )
+            ->search($request->input('search'))
             ->latest('deleted_at')
             ->paginate(15)
             ->withQueryString();

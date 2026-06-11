@@ -1,24 +1,17 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     createColumnHelper,
-    flexRender,
     getCoreRowModel,
     useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useMemo, useState } from 'react';
-
+import { useMemo } from 'react';
 import { create as createUser, edit as editUser, show as showUser } from '@/actions/App/Http/Controllers/UserController';
-import { Badge } from '@/components/ui/badge';
+import { DataTable } from '@/components/data-table';
+import { DataTablePagination } from '@/components/data-table-pagination';
+import { RoleBadge } from '@/components/role-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { users as adminUsersRoute } from '@/routes/admin';
 import { PRIVILEGED_ROLES } from '@/types';
 import type { Auth, PaginatedData, Role, User } from '@/types';
@@ -32,29 +25,13 @@ type Props = {
     filters: { search?: string };
 };
 
-const roleConfig: Record<
-    Role,
-    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-    site_admin: { label: 'Site Admin', variant: 'destructive' },
-    admin: { label: 'Admin', variant: 'default' },
-    manager: { label: 'Manager', variant: 'secondary' },
-    user: { label: 'User', variant: 'outline' },
-};
-
-function RoleBadge({ role }: { role: Role }) {
-    const { label, variant } = roleConfig[role];
-
-    return <Badge variant={variant}>{label}</Badge>;
-}
-
 const columnHelper = createColumnHelper<User>();
 
 type PageProps = { auth: Auth };
 
 export default function UsersIndex({ users, filters }: Props) {
     const { auth } = usePage<PageProps>().props;
-    const [search, setSearch] = useState(filters.search ?? '');
+    const [search, setSearch] = useDebouncedSearch(filters.search, adminUsersRoute.url());
 
     const canEditRow = (target: User) =>
         auth.can.edit_user &&
@@ -96,36 +73,12 @@ export default function UsersIndex({ users, filters }: Props) {
         [auth.can.edit_user, auth.user.id, auth.user.role],
     );
 
-    useEffect(() => {
-        if (search === (filters.search ?? '')) return;
-
-        const timer = setTimeout(() => {
-            router.get(
-                adminUsersRoute.url(),
-                { search: search || undefined },
-                { preserveState: true, replace: true },
-            );
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [search, filters.search]);
-
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: users.data,
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
-
-    function goToPage(url: string | null) {
-        if (!url) return;
-
-        router.get(url, {}, { preserveState: true });
-    }
-
-    const pageLinks = users.links.filter(
-        (link) => link.label !== '&laquo; Previous' && link.label !== 'Next &raquo;',
-    );
 
     return (
         <>
@@ -145,90 +98,13 @@ export default function UsersIndex({ users, filters }: Props) {
                     )}
                 </div>
 
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id}>
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext(),
-                                            )}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-                        <TableBody>
-                            {table.getRowModel().rows.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        className="cursor-pointer"
-                                        onClick={() => goToUser(row.original)}
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext(),
-                                                )}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="h-24 text-center"
-                                    >
-                                        No users found.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+                <DataTable
+                    table={table}
+                    emptyMessage="No users found."
+                    onRowClick={(row) => goToUser(row.original)}
+                />
 
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>
-                        {users.from
-                            ? `Showing ${users.from}–${users.to} of ${users.total}`
-                            : 'No results'}
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!users.prev_page_url}
-                            onClick={() => goToPage(users.prev_page_url)}
-                        >
-                            Previous
-                        </Button>
-                        {pageLinks.map((link) => (
-                            <Button
-                                key={link.label}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                disabled={!link.url}
-                                onClick={() => goToPage(link.url)}
-                            >
-                                {link.label}
-                            </Button>
-                        ))}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!users.next_page_url}
-                            onClick={() => goToPage(users.next_page_url)}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
+                <DataTablePagination paginatedData={users} />
             </div>
         </>
     );

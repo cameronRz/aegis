@@ -77,6 +77,28 @@ metadata:
 - **`ui/`** — Generic, unstyled-first primitives (shadcn-style). Not app-specific. Examples: `Button`, `Badge`, `Card`, `Table`, `Dialog`, `Input`, `Select`, `Tooltip`, `Sheet`, `Sidebar`, `Skeleton`, `Sonner`.
 - **`components/` root** — App/feature-specific components that know about domain and layout. Examples: `app-sidebar.tsx`, `app-header.tsx`, `nav-main.tsx`, `manage-passkeys.tsx`, `delete-user.tsx`.
 
+### Shared data-table components
+| Component | File | Props |
+|---|---|---|
+| `DataTable` | `data-table.tsx` | `table: Table<TData>`, `emptyMessage?`, `onRowClick?`, `getRowClassName?` |
+| `DataTablePagination` | `data-table-pagination.tsx` | `paginatedData: PaginatedData<T>` |
+
+All index pages pass a pre-configured TanStack `table` instance into `DataTable`. `DataTablePagination` owns the `goToPage` logic and the "Showing X–Y of Z" text. Do not inline these patterns in new index pages.
+
+### Shared domain components
+| Component | File | Exports |
+|---|---|---|
+| `ProductTypeBadge` | `product-type-badge.tsx` | `ProductTypeBadge` component + `productTypeConfig` record |
+| `RoleBadge` | `role-badge.tsx` | `RoleBadge` component + `roleConfig` record |
+| `ConfirmDialog` | `confirm-dialog.tsx` | `ConfirmDialog` component |
+
+**`ConfirmDialog` props:** `open`, `onOpenChange`, `title`, `alertTitle?` (default: "Are you sure?"), `description: ReactNode`, `confirmLabel?` (default: "Delete"), `processing?`, `onConfirm`. Use for all destructive confirmations — do not inline the `Dialog + Alert[destructive]` pattern.
+
+**`productTypeConfig` / `roleConfig`:** Import the config objects when you need to destructure label/variant for a single value; import the badge component when rendering a `<Badge>` directly.
+
+### Shared hook
+`useDebouncedSearch(serverValue, route, delay?)` — `resources/js/hooks/use-debounced-search.ts`. Returns `[search, setSearch]`. Fires a debounced `router.get` after the user stops typing. Use in every index page that has a search input.
+
 ### Key app-shell components
 | Component | Role |
 |---|---|
@@ -161,6 +183,13 @@ formatCents(cents: number, currency?: string, locale?: string): string
 ```
 Use this for all client-side price display. The raw `price` integer (cents) always travels in JSON; format only at the point of display. The PHP equivalent for server-side use (emails, PDFs) is `App\Support\Money::format(int $cents): string`.
 
+### `lib/billing.ts` — Billing interval labels
+```ts
+intervalLabels: Record<BillingInterval, string>
+// { weekly: 'week', monthly: 'month', yearly: 'year' }
+```
+Import for displaying billing intervals in subscription-related UI (product show, subscription list, etc.).
+
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
 
 ### Server-side authorization props (show pages)
@@ -170,7 +199,22 @@ Per-model authorization decisions (can this viewer edit/delete THIS specific use
 
 ## Confirmation Dialogs
 
-There is **no `AlertDialog`** component in this UI library. Do not try to add or import one. The established pattern for all destructive confirmations is `Dialog` + `Alert variant="destructive"` inside the content.
+There is **no `AlertDialog`** component in this UI library. Do not try to add or import one. All destructive confirmations use the shared `ConfirmDialog` component from `@/components/confirm-dialog`:
+
+```tsx
+<ConfirmDialog
+    open={open}
+    onOpenChange={setOpen}
+    title="Delete Something"
+    description={<><strong>{item.name}</strong> will be permanently deleted.</>}
+    confirmLabel="Delete"        // optional, defaults to "Delete"
+    alertTitle="Are you sure?"   // optional, defaults to "Are you sure?"
+    processing={deleting}
+    onConfirm={handleDelete}
+/>
+```
+
+The underlying pattern it wraps — for reference only, do not replicate inline:
 
 **Pattern — subtle trigger + Dialog confirmation:**
 ```tsx

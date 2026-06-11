@@ -36,6 +36,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 **Key methods:**
 - `isAdmin(): bool` — returns `true` for `site_admin` and `admin` roles; use this instead of inline `in_array($role, [...])` checks
 - `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then checks `$this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value)` (in-memory, no additional DB query once loaded)
+- `assignableRoles(): Role[]` — returns the Role cases this user is allowed to assign to others. `site_admin` gets all roles; everyone else gets `[Manager, User]`. Used by `UserController`, `StoreUserRequest`, and `UpdateUserRequest` — call `array_column($user->assignableRoles(), 'value')` to get string values for validation/view props.
 
 **Fillable:** `first_name`, `last_name`, `email`, `password` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
@@ -83,6 +84,11 @@ Represents items available for purchase. Supports physical goods, digital downlo
 - `scopeOrdered()` — orders by `sort_order` then `id` (provided by `Sortable` trait)
 
 **`sortableScope()` override:** returns `['category_id']` — sort sequence is scoped per category.
+
+**Scopes (continued):**
+- `scopeSearch(?string $search)` — filters by `name LIKE` or `sku LIKE` when `$search` is non-null. Used in `ProductController` for both `index()` and `trash()`. Call as `->search($request->input('search'))`.
+
+**`ProductValidationRules` trait (`app/Concerns/ProductValidationRules.php`):** shared validation rules for `StoreProductRequest` and `UpdateProductRequest`. The `productRules()` method returns all shared rules. Each request adds its own SKU uniqueness rule on top. Pattern mirrors `ProfileValidationRules`.
 
 **Enums (all in `App\Enum\`):**
 - `ProductType` — `Physical`, `Digital`, `Subscription`

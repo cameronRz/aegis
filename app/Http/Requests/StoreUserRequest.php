@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Concerns\ProfileValidationRules;
-use App\Enum\Role;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,11 +18,7 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        $viewer = $this->user();
-
-        $allowedRoles = $viewer->role === Role::SiteAdmin
-            ? array_column(Role::cases(), 'value')
-            : [Role::Manager->value, Role::User->value];
+        $allowedRoles = array_column($this->user()->assignableRoles(), 'value');
 
         return [
             ...$this->profileRules(),

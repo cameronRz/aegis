@@ -53,6 +53,19 @@ class User extends Authenticatable implements PasskeyUser
         return in_array($this->role, [Role::SiteAdmin, Role::Admin], true);
     }
 
+    /**
+     * Returns the Role cases this user is allowed to assign to other users.
+     * Site admins can assign any role; everyone else is restricted to manager and below.
+     *
+     * @return Role[]
+     */
+    public function assignableRoles(): array
+    {
+        return $this->role === Role::SiteAdmin
+            ? Role::cases()
+            : [Role::Manager, Role::User];
+    }
+
     public function hasPermission(PermissionName $permission): bool
     {
         if ($this->isAdmin()) {

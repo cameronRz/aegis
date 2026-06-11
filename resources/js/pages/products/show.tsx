@@ -1,20 +1,15 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { destroy as destroyProduct, edit as editProduct } from '@/actions/App/Http/Controllers/ProductController';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { productTypeConfig } from '@/components/product-type-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { intervalLabels } from '@/lib/billing';
 import { formatCents } from '@/lib/money';
 import { products as adminProductsRoute } from '@/routes/admin';
-import type { BillingInterval, Product, ProductType } from '@/types';
+import type { Product } from '@/types';
 
 type Props = {
     product: Product;
@@ -23,26 +18,11 @@ type Props = {
     canDelete: boolean;
 };
 
-const typeConfig: Record<
-    ProductType,
-    { label: string; variant: 'default' | 'secondary' | 'outline' }
-> = {
-    physical: { label: 'Physical', variant: 'default' },
-    digital: { label: 'Digital', variant: 'secondary' },
-    subscription: { label: 'Subscription', variant: 'outline' },
-};
-
-const intervalLabels: Record<BillingInterval, string> = {
-    weekly: 'week',
-    monthly: 'month',
-    yearly: 'year',
-};
-
 export default function ProductShow({ product, imageUrl, canEdit, canDelete }: Props) {
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    const { label: typeLabel, variant: typeVariant } = typeConfig[product.type];
+    const { label: typeLabel, variant: typeVariant } = productTypeConfig[product.type];
     const isSubscription = product.type === 'subscription';
     const isPhysical = product.type === 'physical';
 
@@ -161,25 +141,15 @@ export default function ProductShow({ product, imageUrl, canEdit, canDelete }: P
                 </Card>
             </div>
 
-            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <DialogContent aria-describedby={undefined}>
-                    <DialogTitle>Delete {product.name}</DialogTitle>
-                    <Alert variant="destructive">
-                        <AlertTitle>Are you sure?</AlertTitle>
-                        <AlertDescription>
-                            <strong>{product.name}</strong> will be permanently deleted.
-                        </AlertDescription>
-                    </Alert>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
-                            Delete product
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title={`Delete ${product.name}`}
+                description={<><strong>{product.name}</strong> will be permanently deleted.</>}
+                confirmLabel="Delete product"
+                processing={deleting}
+                onConfirm={handleDelete}
+            />
         </>
     );
 }
