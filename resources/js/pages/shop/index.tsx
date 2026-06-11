@@ -1,7 +1,10 @@
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { store as addToCart } from '@/actions/App/Http/Controllers/CartController';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { ProductTypeBadge } from '@/components/product-type-badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -126,6 +129,23 @@ export default function ShopIndex({ products, categories, filters }: Props) {
                                         <p className="mt-auto pt-2 font-semibold">
                                             {formatProductPrice(product)}
                                         </p>
+                                        <Button
+                                            size="sm"
+                                            className="w-full"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.post(
+                                                    addToCart.url(),
+                                                    { product_id: product.id },
+                                                    {
+                                                        preserveScroll: true,
+                                                        onSuccess: () => toast('Added to cart'),
+                                                    },
+                                                );
+                                            }}
+                                        >
+                                            Add to Cart
+                                        </Button>
                                     </CardContent>
                                 </Card>
                             );

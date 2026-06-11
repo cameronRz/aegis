@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
@@ -14,6 +15,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('shop', [ShopController::class, 'index'])->name('shop');
     Route::get('shop/{product}', [ShopController::class, 'show'])->name('shop.show');
+
+    // Cart — literal /cart/items before parametric /cart/{...}
+    Route::get('cart', [CartController::class, 'show'])->name('cart');
+    Route::post('cart/items', [CartController::class, 'store'])->name('cart.items.store');
+    Route::patch('cart/items/{cartItem}', [CartController::class, 'update'])->name('cart.items.update');
+    Route::delete('cart/items/{cartItem}', [CartController::class, 'destroy'])->name('cart.items.destroy');
+    Route::delete('cart', [CartController::class, 'clear'])->name('cart.clear');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('can:view_users')->group(function () {

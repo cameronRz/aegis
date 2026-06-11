@@ -253,6 +253,27 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 
 ---
 
+## Cart Models
+
+**`Cart`** (`app/Models/Cart.php`)
+- `belongsTo(User::class)`
+- `hasMany(CartItem::class)`
+- Fillable: `user_id`
+
+**`CartItem`** (`app/Models/CartItem.php`)
+- `belongsTo(Cart::class)`
+- `belongsTo(Product::class)`
+- Fillable: `cart_id`, `product_id`, `quantity`
+
+**`CartException`** (`app/Exceptions/CartException.php`) — thrown by `CartService` on business rule violations. Named constructors: `::productInactive()`, `::subscriptionQuantityExceeded()`, `::insufficientStock(int $available)`. Controllers catch it and return `back()->withErrors(['cart' => $e->getMessage()])`.
+
+**`CartService`** (`app/Services/CartService.php`) — all cart mutations go through here. Key methods: `getOrCreate(User)`, `add(Cart, Product, int $qty=1)`, `updateQuantity(CartItem, int)`, `remove(CartItem)`, `clear(Cart)`, `total(Cart): int`, `isEmpty(Cart): bool`, `hasSubscription(Cart): bool`. Every mutation calls `syncCartCount()` which writes `cart_count` to the session. The `add()` method queries from DB (not the in-memory collection) to detect existing items — the collection is stale after first add.
+
+**Business rules enforced in `CartService::add()`:**
+- Product must be `is_active`
+- Subscription products: max quantity of 1 (across existing + new)
+- Physical products with `track_inventory`: `stock_quantity` must cover requested quantity
+
 ## Database Tables
 
 | Table | Purpose |
@@ -262,6 +283,8 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 | `user_permissions` | Many-to-many: which users have which permissions |
 | `categories` | Product category tree (self-referential via `parent_id`) |
 | `products` | Products available for purchase (physical, digital, subscription) |
+| `carts` | One cart per user (`user_id` nullable, nullOnDelete) |
+| `cart_items` | Line items in a cart: `cart_id`, `product_id`, `quantity`; unique(`cart_id`, `product_id`) |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
 | `sessions` | Database-backed sessions |

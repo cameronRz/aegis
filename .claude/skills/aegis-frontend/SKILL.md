@@ -45,6 +45,15 @@ metadata:
 | `products/edit.tsx` | Edit product form; pre-fills all fields from `product` prop; passes `imageUrl` to `ProductFormFields` as `existingImageUrl`; submits via PATCH with `forceFormData: true` |
 | `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. `remove_image` checkbox shown on edit when `existingImageUrl` is set and no new file is selected; checking it clears the file input and hides the preview. |
 
+#### `cart/` (client-facing)
+| File | Description |
+|---|---|
+| `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button is disabled placeholder until Phase 4. Empty state shows link back to Shop. |
+
+**Cart `errors.cart`:** `CartService` throws `CartException` on business rule violations; `CartController` catches it and calls `back()->withErrors(['cart' => $e->getMessage()])`. The cart page surfaces this above the item list.
+
+**Cart count badge in sidebar:** `cartItemCount` is shared via `HandleInertiaRequests` from `session('cart_count', 0)`. `CartService` writes this to the session after every mutation. `NavItem.badge` renders as a muted number on the right of the nav label. Badge is omitted when count is 0 (`badge: cartItemCount || undefined`).
+
 #### `shop/` (client-facing)
 | File | Description |
 |---|---|
@@ -402,6 +411,7 @@ Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admi
 - `auth.can` — gate results (e.g., `view_users`)
 - `name` — app name
 - `sidebarOpen` — cookie-persisted sidebar state
+- `cartItemCount` — integer, read from `session('cart_count', 0)`; updated by `CartService` after every mutation; 0 for guests
 
 ---
 

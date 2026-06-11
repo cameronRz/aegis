@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, ShoppingBag, Tag, Users } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, Package, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,7 +13,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, shop as shopRoute } from '@/routes';
+import { cart as cartRoute, dashboard, shop as shopRoute } from '@/routes';
 import {
     categories as adminCategoriesRoute,
     products as adminProductsRoute,
@@ -34,41 +34,54 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
-const ALL_NAV_ITEMS: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Shop',
-        href: shopRoute.url(),
-        icon: ShoppingBag,
-    },
-    {
-        title: 'Users',
-        href: adminUsersRoute.url(),
-        icon: Users,
-        permission: 'view_users',
-    },
-    {
-        title: 'Categories',
-        href: adminCategoriesRoute.url(),
-        icon: Tag,
-        permission: 'view_categories',
-    },
-    {
-        title: 'Products',
-        href: adminProductsRoute.url(),
-        icon: Package,
-        permission: 'view_products',
-    },
-];
+function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
+    return [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: 'Shop',
+            href: shopRoute.url(),
+            icon: ShoppingBag,
+        },
+        {
+            title: 'Cart',
+            href: cartRoute.url(),
+            icon: ShoppingCart,
+            badge: cartItemCount || undefined,
+            // Cart state changes via POSTs from other pages, so prefetching would
+            // serve a stale cached version after items are added.
+            prefetch: false,
+        },
+        {
+            title: 'Users',
+            href: adminUsersRoute.url(),
+            icon: Users,
+            permission: 'view_users',
+        },
+        {
+            title: 'Categories',
+            href: adminCategoriesRoute.url(),
+            icon: Tag,
+            permission: 'view_categories',
+        },
+        {
+            title: 'Products',
+            href: adminProductsRoute.url(),
+            icon: Package,
+            permission: 'view_products',
+        },
+    ];
+}
 
 export function AppSidebar() {
-    const { auth } = usePage().props;
+    const { auth, cartItemCount } = usePage<{ auth: { can: Record<string, boolean> }; cartItemCount: number }>().props;
 
-    const mainNavItems = ALL_NAV_ITEMS.filter((item) => !item.permission || auth.can[item.permission]);
+    const mainNavItems = ALL_NAV_ITEMS(cartItemCount).filter(
+        (item) => !item.permission || auth.can[item.permission],
+    );
 
     return (
         <Sidebar collapsible="icon" variant="inset">
