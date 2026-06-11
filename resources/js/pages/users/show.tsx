@@ -1,26 +1,18 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-
 import { destroy as destroyUser, edit as editUser } from '@/actions/App/Http/Controllers/UserController';
 import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { RoleBadge } from '@/components/role-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
 import { PRIVILEGED_ROLES } from '@/types';
-import type { Permission, Role, User } from '@/types';
+import type { Permission, User } from '@/types';
 import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
 
 type Props = {
@@ -31,18 +23,7 @@ type Props = {
     canManagePermissions: boolean;
 };
 
-const roleConfig: Record<
-    Role,
-    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-    site_admin: { label: 'Site Admin', variant: 'destructive' },
-    admin: { label: 'Admin', variant: 'default' },
-    manager: { label: 'Manager', variant: 'secondary' },
-    user: { label: 'User', variant: 'outline' },
-};
-
 export default function UserShow({ user, allPermissions, canEdit, canDelete, canManagePermissions }: Props) {
-    const { label, variant } = roleConfig[user.role];
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -97,7 +78,7 @@ export default function UserShow({ user, allPermissions, canEdit, canDelete, can
                                 <CardDescription>{user.email}</CardDescription>
                             </div>
                             <div className="flex items-center gap-3">
-                                <Badge variant={variant}>{label}</Badge>
+                                <RoleBadge role={user.role} />
                                 {canEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={editUser(user).url}>Edit</Link>
@@ -174,26 +155,15 @@ export default function UserShow({ user, allPermissions, canEdit, canDelete, can
                 </Card>
             </div>
 
-            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-                <DialogContent aria-describedby={undefined}>
-                    <DialogTitle>Delete {user.full_name}</DialogTitle>
-                    <Alert variant="destructive">
-                        <AlertTitle>Are you sure?</AlertTitle>
-                        <AlertDescription>
-                            This will permanently delete {user.full_name}'s account and cannot be
-                            undone.
-                        </AlertDescription>
-                    </Alert>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
-                            Delete user
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                title={`Delete ${user.full_name}`}
+                description={`This will permanently delete ${user.full_name}'s account and cannot be undone.`}
+                confirmLabel="Delete user"
+                processing={deleting}
+                onConfirm={handleDelete}
+            />
         </>
     );
 }

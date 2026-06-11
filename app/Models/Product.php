@@ -61,4 +61,14 @@ class Product extends Model
     {
         $query->where('is_active', true);
     }
+
+    public function scopeSearch(Builder $query, ?string $search): void
+    {
+        $query->when($search, function (Builder $q, string $term): void {
+            $q->where(function (Builder $inner) use ($term): void {
+                $inner->where('name', 'like', "%{$term}%")
+                    ->orWhere('sku', 'like', "%{$term}%");
+            });
+        });
+    }
 }

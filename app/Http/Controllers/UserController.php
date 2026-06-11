@@ -51,12 +51,8 @@ class UserController extends Controller
     {
         $viewer = $request->user();
 
-        $availableRoles = $viewer->role === Role::SiteAdmin
-            ? array_column(Role::cases(), 'value')
-            : [Role::Manager->value, Role::User->value];
-
         return Inertia::render('users/create', [
-            'availableRoles' => $availableRoles,
+            'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
             'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
             'canAssignPermissions' => $viewer->isAdmin(),
         ]);
@@ -97,13 +93,9 @@ class UserController extends Controller
 
         $viewer = $request->user();
 
-        $availableRoles = $viewer->role === Role::SiteAdmin
-            ? array_column(Role::cases(), 'value')
-            : [Role::Manager->value, Role::User->value];
-
         return Inertia::render('users/edit', [
             'user' => $user,
-            'availableRoles' => $availableRoles,
+            'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
             'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
             'canAssignPermissions' => $viewer->isAdmin(),
         ]);
