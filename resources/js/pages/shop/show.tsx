@@ -1,6 +1,9 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { store as addToCart } from '@/actions/App/Http/Controllers/CartController';
 import { ProductTypeBadge } from '@/components/product-type-badge';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { intervalLabels } from '@/lib/billing';
 import { formatCents } from '@/lib/money';
 import { shop as shopRoute } from '@/routes';
@@ -64,6 +67,22 @@ export default function ShopShow({ product, imageUrl }: Props) {
                                 {stock}
                             </Badge>
                         )}
+
+                        <Button
+                            className="w-full sm:w-auto"
+                            onClick={() =>
+                                router.post(
+                                    addToCart.url(),
+                                    { product_id: product.id },
+                                    {
+                                        preserveScroll: true,
+                                        onSuccess: () => toast('Added to cart'),
+                                    },
+                                )
+                            }
+                        >
+                            Add to Cart
+                        </Button>
 
                         {product.description && (
                             <p className="text-sm leading-relaxed">{product.description}</p>

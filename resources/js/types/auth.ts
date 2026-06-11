@@ -87,6 +87,24 @@ export type Auth = {
     can: Can;
 };
 
+export type CartItem = {
+    id: number;
+    cart_id: number;
+    product_id: number;
+    quantity: number;
+    product?: Product | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type Cart = {
+    id: number;
+    user_id: number | null;
+    items: CartItem[];
+    created_at: string;
+    updated_at: string;
+};
+
 /* @chisel-passkeys */
 export type Passkey = {
     id: number;
