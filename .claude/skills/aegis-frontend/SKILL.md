@@ -45,6 +45,16 @@ metadata:
 | `products/edit.tsx` | Edit product form; pre-fills all fields from `product` prop; passes `imageUrl` to `ProductFormFields` as `existingImageUrl`; submits via PATCH with `forceFormData: true` |
 | `products/product-form-fields.tsx` | **Shared domain component** — exports `ProductFormData` type, `ProductCategory` type, and `ProductFormFields` component. Manages image preview state internally (object URL, cleaned up on unmount). Type change clears irrelevant fields and forces `price_type`. SKU auto-uppercased. Price stored as cents, displayed as dollars via local `priceDisplay` string state (normalised to 2dp on blur). Subscription fields (billing interval, trial days) shown only when `type === 'subscription'`; inventory fields shown only when `type === 'physical'`. `remove_image` checkbox shown on edit when `existingImageUrl` is set and no new file is selected; checking it clears the file input and hides the preview. |
 
+#### `shop/` (client-facing)
+| File | Description |
+|---|---|
+| `shop/index.tsx` | Product grid for authenticated clients. `auto-fill` responsive grid (`minmax(220px,1fr)`). Category filter (Select, server-side via `?category=slug`) + debounced search — both filters are passed together in every router call so neither drops the other. Product cards: `bg-muted` image container with `object-contain` (no cropping), name, `ProductTypeBadge`, formatted price (subscriptions show `$X/month`). Cards are clickable → `shop/show.tsx`. Uses `DataTablePagination`. Inline debounce instead of `useDebouncedSearch` — see comment in file for why. |
+| `shop/show.tsx` | Client-facing product detail. Two-column layout on desktop (image left, details right). `object-contain` image with `bg-muted` background. Shows: name, `ProductTypeBadge`, category, price with billing interval (subscriptions), free trial days, inventory badge ("In stock"/"Out of stock" when `track_inventory = true`), unit count. No edit/delete controls — admin-only. Returns 404 for inactive or soft-deleted products (enforced in controller). |
+
+**Shop image pattern:** All shop image containers use `bg-muted` as a wrapper with `object-contain` on the `<img>` — full image visible, letterbox fills with muted background. Do not use `object-cover` in the shop (clips product images).
+
+**`formatProductPrice` helper:** Defined locally in both `shop/index.tsx` and `shop/show.tsx` — formats cents and appends billing interval for subscriptions (e.g. `$29.99/month`). Uses `intervalLabels` from `@/lib/billing`.
+
 ### Settings pages (`settings/`)
 | File | Description |
 |---|---|
@@ -106,7 +116,7 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Shop (no gate — all authenticated users), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |

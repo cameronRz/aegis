@@ -14,6 +14,9 @@ metadata:
 GET  /                          → welcome                              (public)
 GET  /dashboard                 → dashboard                            (auth + verified)
 
+GET  /shop                      → shop                                 (auth + verified)
+GET  /shop/{product}            → shop.show                            (auth + verified) — 404 if product inactive or soft-deleted
+
 GET   /admin/users                                         → admin.users                          (can:view_users)
 GET   /admin/users/create                                  → admin.users.create                   (can:create_user)
 POST  /admin/users                                         → admin.users.store                    (can:create_user)
@@ -75,6 +78,13 @@ trash.url();
 ```
 
 Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
+
+The same pattern applies to shop routes:
+```ts
+import { shop } from '@/routes';           // GET /shop (no-arg)
+import { show } from '@/routes/shop';      // GET /shop/{product} (parametric)
+show(product).url                          // string property — do not call as function
+```
 
 ## Fortify Auth Routes (auto-registered)
 
