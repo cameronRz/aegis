@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +11,9 @@ Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    Route::get('shop', [ShopController::class, 'index'])->name('shop');
+    Route::get('shop/{product}', [ShopController::class, 'show'])->name('shop.show');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('can:view_users')->group(function () {
