@@ -269,6 +269,8 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 
 **`CartService`** (`app/Services/CartService.php`) — all cart mutations go through here. Key methods: `getOrCreate(User)`, `add(Cart, Product, int $qty=1)`, `updateQuantity(CartItem, int)`, `remove(CartItem)`, `clear(Cart)`, `total(Cart): int`, `isEmpty(Cart): bool`, `hasSubscription(Cart): bool`. Every mutation calls `syncCartCount()` which writes `cart_count` to the session. The `add()` method queries from DB (not the in-memory collection) to detect existing items — the collection is stale after first add.
 
+**`CartController::show()`** filters out cart items whose product is `null` before passing to Inertia. Force-deleting a product cascades and removes the cart item, but soft-deleting leaves the item with an unresolvable `belongsTo` (null). The filter strips these silently; checkout validation catches them separately.
+
 **Business rules enforced in `CartService::add()`:**
 - Product must be `is_active`
 - Subscription products: max quantity of 1 (across existing + new)

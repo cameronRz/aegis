@@ -54,6 +54,18 @@ metadata:
 
 **Cart count badge in sidebar:** `cartItemCount` is shared via `HandleInertiaRequests` from `session('cart_count', 0)`. `CartService` writes this to the session after every mutation. `NavItem.badge` renders as a muted number on the right of the nav label. Badge is omitted when count is 0 (`badge: cartItemCount || undefined`).
 
+**`prefetch: false` on the Cart nav item:** Inertia prefetches nav links on hover. Because the cart mutates from other pages (Add to Cart POSTs), a prefetched `/cart` would be stale after items are added. The Cart nav item sets `prefetch: false` so clicking it always fetches fresh data. Apply the same to any nav item whose state is frequently mutated by other pages.
+
+**Page-specific type narrowing with `Omit`:** When a controller guarantees a relationship is always loaded (e.g. `items.product` on the cart page), use `Omit` to replace the nullable base type rather than intersecting with `NonNullable`:
+```ts
+// ✗ Intersection — TypeScript may still see the optional product? from CartItem
+type CartPageItem = CartItem & { product: Product };
+
+// ✓ Omit — removes the nullable field entirely before adding the required one
+type CartPageItem = Omit<CartItem, 'product'> & { product: Product };
+type CartPageCart = Omit<Cart, 'items'> & { items: CartPageItem[] };
+```
+
 #### `shop/` (client-facing)
 | File | Description |
 |---|---|

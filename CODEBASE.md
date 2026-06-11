@@ -74,3 +74,4 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 - **Destructive confirmations** — always use `ConfirmDialog` from `@/components/confirm-dialog`; do not inline the `Dialog + Alert[destructive]` pattern
 - **Role assignment logic** — call `$user->assignableRoles()` (returns `Role[]`); never re-derive inline
 - **Product search** — use `->search($request->input('search'))` scope on the `Product` query builder
+- **Narrowing nullable relationship types** — when a controller guarantees a relationship is always loaded, use `Omit` to replace the base nullable field rather than intersecting: `type PageItem = Omit<CartItem, 'product'> & { product: Product }`. Intersection leaves the optional `?` in play; `Omit` removes it entirely.
