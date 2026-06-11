@@ -23,8 +23,9 @@ metadata:
 |---|---|
 | `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
-| `users/create.tsx` | Create user form: name, email, role select, optional permissions (admins only); sends password reset email on creation |
-| `users/edit.tsx` | Edit user form: same fields/permission UI as create, pre-filled with existing user data; uses PATCH; self-editing blocked (403) |
+| `users/create.tsx` | Create user form; uses `UserFormFields`; sends password reset email on creation |
+| `users/edit.tsx` | Edit user form; pre-fills from `user` prop; uses PATCH via `updateUser(user).url`; uses `UserFormFields`; self-editing blocked (403) |
+| `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type and `UserFormFields` component. Owns `roleLabels`, `togglePermission` logic, and the permissions card. Accepts `permissionsDescription?` to customise the card subtitle between create and edit contexts. Used by both `create.tsx` and `edit.tsx`. |
 
 #### `categories/`
 | File | Description |
