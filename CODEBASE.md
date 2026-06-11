@@ -34,11 +34,16 @@ Detailed domain knowledge is in project skills — activate them when working in
 - **`aegis-routes`** — All route definitions with middleware and named route index
 - **`aegis-frontend`** — React pages, component catalog, TypeScript types, Inertia shared props, Tailwind design tokens
 
+## Active Planning
+
+- **`.claude/planning/cart-checkout-plan.md`** — Cart, checkout, and subscription implementation (Phases 1–6). Check the "Currently on" line at the top to find current position. Run the Phase Exit Checklist before moving between phases.
+- **`.claude/planning/phase-one-polishing.md`** — Completed refactoring reference. Describes shared components and abstractions introduced during the polishing pass.
+
 ---
 
 ## Keeping Documentation Current
 
-After making any change to the app, update the relevant project skill file if the change affects documented domain knowledge:
+After completing a phase or feature, update the relevant skill file as a final step — not mid-implementation:
 
 - New/modified model, relationship, gate, pivot, or validation rule → update `aegis-models`
 - New/modified route, middleware, or controller → update `aegis-routes`
@@ -51,6 +56,9 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 ## Collaboration Preferences
 
 - **Ask clarifying questions before implementing** — for any non-trivial change, ask targeted questions with recommended options (pre-selected defaults) before writing code. Surface name collisions, backwards-compatibility trade-offs, and scope decisions upfront.
+- **Q&A filter** — if a decision can be reversed in under an hour, just make a call. Ask first when the decision touches the DB schema, a public API surface, or a naming convention that spreads across many files.
+- **Update at sub-section boundaries, not mid-file** — after each numbered step (e.g. 2.3 CartService) is fully working: run Pint, run tests, check off that box in the plan, and update the "Currently on" line to the next step. This keeps context recoverable across sessions without interrupting implementation flow mid-task. Do a full skills update when the entire phase is done.
+- **Definition of done** — before starting any phase, confirm what "done" means: which tests must pass, which routes need Wayfinder regeneration, which skills need updating. Use the exit checklist in the active plan file.
 
 ---
 
