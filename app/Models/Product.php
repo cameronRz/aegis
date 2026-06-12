@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'track_inventory',
     'sort_order',
     'image',
+    'stripe_product_id',
+    'stripe_price_id',
 ])]
 class Product extends Model
 {
