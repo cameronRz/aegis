@@ -7,16 +7,21 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\Permission;
 use App\Models\User;
+use App\Services\StripeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Stripe\Exception\ApiErrorException;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly StripeService $stripe) {}
+
     public function index(Request $request): Response
     {
         $users = User::query()
@@ -71,6 +76,17 @@ class UserController extends Controller
 
         $user->role = Role::from($request->validated('role'));
         $user->email_verified_at = now();
+
+        try {
+            $customer = $this->stripe->createCustomer($user);
+            $user->stripe_customer_id = $customer->id;
+        } catch (ApiErrorException $e) {
+            Log::error('Failed to create Stripe customer for admin-created user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $user->save();
 
         if ($viewer->isAdmin() && $request->filled('permissions')) {

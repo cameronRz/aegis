@@ -18,7 +18,7 @@ use Stripe\StripeClient;
 use Stripe\Subscription;
 use Stripe\Webhook;
 
-readonly class StripeService
+class StripeService
 {
     public function __construct(private StripeClient $client) {}
 

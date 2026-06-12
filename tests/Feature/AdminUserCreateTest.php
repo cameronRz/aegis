@@ -3,14 +3,24 @@
 use App\Enum\Role;
 use App\Models\Permission;
 use App\Models\User;
+use App\Services\StripeService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
+use Mockery\MockInterface;
+use Stripe\Customer;
+use Stripe\Exception\ApiErrorException;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 beforeEach(function () {
     $this->withoutVite();
+
+    $this->mock(StripeService::class, function (MockInterface $mock) {
+        $mock->allows('createCustomer')->andReturn(
+            Customer::constructFrom(['id' => 'cus_test123'])
+        );
+    });
 
     $this->createUserPermission = Permission::create([
         'name' => 'create_user',
@@ -109,7 +119,28 @@ it('creates a user and redirects to their show page', function () {
     expect($newUser->first_name)->toBe('Jane')
         ->and($newUser->last_name)->toBe('Doe')
         ->and($newUser->role)->toBe(Role::User)
-        ->and($newUser->email_verified_at)->not->toBeNull();
+        ->and($newUser->email_verified_at)->not->toBeNull()
+        ->and($newUser->stripe_customer_id)->toBe('cus_test123');
+});
+
+it('still creates the user if stripe customer creation fails', function () {
+    Notification::fake();
+
+    $this->mock(StripeService::class, function (MockInterface $mock) {
+        $mock->allows('createCustomer')->andThrow(
+            $this->createMock(ApiErrorException::class)
+        );
+    });
+
+    actingAs($this->admin)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'role' => 'user',
+    ])->assertRedirect();
+
+    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
+    expect($newUser->stripe_customer_id)->toBeNull();
 });
 
 it('sends a password reset email to the new user', function () {
