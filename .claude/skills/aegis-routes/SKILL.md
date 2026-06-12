@@ -17,6 +17,10 @@ GET  /dashboard                 → dashboard                            (auth +
 GET  /shop                      → shop                                 (auth + verified)
 GET  /shop/{product}            → shop.show                            (auth + verified) — 404 if product inactive or soft-deleted
 
+GET  /checkout/success          → checkout.success                     (auth + verified)
+GET  /checkout/cancel           → checkout.cancel                      (auth + verified)
+POST /checkout                  → checkout.store                       (auth + verified)
+
 GET    /cart                    → cart                                 (auth + verified)
 POST   /cart/items              → cart.items.store                     (auth + verified)
 PATCH  /cart/items/{cartItem}   → cart.items.update                    (auth + verified)

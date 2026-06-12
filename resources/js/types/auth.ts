@@ -105,6 +105,37 @@ export type Cart = {
     updated_at: string;
 };
 
+export type OrderStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';
+
+export type OrderItem = {
+    id: number;
+    order_id: number;
+    product_id: number | null;
+    product_name: string;
+    product_sku: string;
+    product_type: string;
+    price: number; // cents
+    quantity: number;
+    product?: Product | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type Order = {
+    id: number;
+    order_number: string;
+    user_id: number | null;
+    status: OrderStatus;
+    subtotal: number; // cents
+    total: number; // cents
+    stripe_checkout_session_id: string | null;
+    stripe_payment_intent_id: string | null;
+    items?: OrderItem[];
+    user?: User | null;
+    created_at: string;
+    updated_at: string;
+};
+
 /* @chisel-passkeys */
 export type Passkey = {
     id: number;

@@ -4,18 +4,20 @@ namespace Database\Seeders;
 
 use App\Enum\Role;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Services\StripeService;
 use Illuminate\Database\Seeder;
+use Stripe\Exception\ApiErrorException;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
 
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
+        $stripe = app(StripeService::class);
+
         // Site admin
         $siteAdmin = User::create([
             'first_name' => config('admin.site_admin.first_name'),
@@ -25,6 +27,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $siteAdmin->role = Role::SiteAdmin;
         $siteAdmin->save();
+        $this->createStripeCustomer($stripe, $siteAdmin);
 
         // Test users
         $admin = User::factory()->create([
@@ -34,6 +37,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $admin->role = Role::Admin;
         $admin->save();
+        $this->createStripeCustomer($stripe, $admin);
 
         $manager = User::factory()->create([
             'first_name' => 'Jack',
@@ -42,12 +46,14 @@ class DatabaseSeeder extends Seeder
         ]);
         $manager->role = Role::Manager;
         $manager->save();
+        $this->createStripeCustomer($stripe, $manager);
 
-        User::factory()->create([
+        $benny = User::factory()->create([
             'first_name' => 'Benny',
             'last_name' => 'Bull',
             'email' => 'benny@email.com',
         ]);
+        $this->createStripeCustomer($stripe, $benny);
 
         User::factory(5)->create(['role' => Role::Admin]);
         User::factory(20)->create(['role' => Role::Manager]);
@@ -58,5 +64,16 @@ class DatabaseSeeder extends Seeder
 
         // Products & categories
         $this->call(ProductSeeder::class);
+    }
+
+    private function createStripeCustomer(StripeService $stripe, User $user): void
+    {
+        try {
+            $customer = $stripe->createCustomer($user);
+            $user->stripe_customer_id = $customer->id;
+            $user->saveQuietly();
+        } catch (ApiErrorException $e) {
+            $this->command->warn("Could not create Stripe customer for {$user->email}: {$e->getMessage()}");
+        }
     }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
@@ -15,6 +16,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('shop', [ShopController::class, 'index'])->name('shop');
     Route::get('shop/{product}', [ShopController::class, 'show'])->name('shop.show');
+
+    // Checkout — literal /checkout/success and /cancel declared before any future /checkout/{id}
+    Route::get('checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
+    Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');
