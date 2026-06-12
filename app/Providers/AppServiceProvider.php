@@ -25,7 +25,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(StripeService::class, function () {
             $client = new StripeClient([
                 'api_key' => config('services.stripe.secret'),
-                'stripe_version' => config('services.stripe.version'),
             ]);
 
             return new StripeService($client);

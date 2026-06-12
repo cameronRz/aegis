@@ -5,13 +5,10 @@ namespace Database\Seeders;
 use App\Enum\BillingInterval;
 use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     public function run(): void
     {
         // Categories

@@ -5,6 +5,7 @@ import {
     destroy as destroyCartItem,
     update as updateCartItem,
 } from '@/actions/App/Http/Controllers/CartController';
+import { store as storeCheckout } from '@/actions/App/Http/Controllers/CheckoutController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ProductTypeBadge } from '@/components/product-type-badge';
 import { Button } from '@/components/ui/button';
@@ -19,12 +20,18 @@ type CartPageCart = Omit<Cart, 'items'> & { items: CartPageItem[] };
 type Props = {
     cart: CartPageCart;
     total: number;
-    errors?: { cart?: string };
+    errors?: { cart?: string; checkout?: string };
 };
 
 export default function CartIndex({ cart, total, errors }: Props) {
     const [clearOpen, setClearOpen] = useState(false);
     const [clearing, setClearing] = useState(false);
+    const [checkingOut, setCheckingOut] = useState(false);
+
+    function handleCheckout() {
+        setCheckingOut(true);
+        router.post(storeCheckout.url(), {}, { onFinish: () => setCheckingOut(false) });
+    }
 
     function handleQuantityChange(item: CartItem, quantity: number) {
         if (quantity < 1) return;
@@ -154,12 +161,18 @@ export default function CartIndex({ cart, total, errors }: Props) {
                         <span className="font-medium tabular-nums">{formatCents(total)}</span>
                     </div>
                     <div className="mt-4">
-                        <Button className="w-full" disabled>
-                            Proceed to Checkout
+                        <Button
+                            className="w-full"
+                            disabled={checkingOut}
+                            onClick={handleCheckout}
+                        >
+                            {checkingOut ? 'Redirecting…' : 'Proceed to Checkout'}
                         </Button>
-                        <p className="mt-2 text-center text-xs text-muted-foreground">
-                            Checkout coming soon
-                        </p>
+                        {errors?.checkout && (
+                            <p className="mt-2 text-center text-xs text-destructive">
+                                {errors.checkout}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>

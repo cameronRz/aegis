@@ -48,7 +48,13 @@ metadata:
 #### `cart/` (client-facing)
 | File | Description |
 |---|---|
-| `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button is disabled placeholder until Phase 4. Empty state shows link back to Shop. |
+| `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button POSTs to `checkout.store` via Wayfinder; shows "Redirecting…" while processing; surfaces `errors.checkout` below the button. Empty state shows link back to Shop. |
+
+#### `checkout/` (client-facing)
+| File | Description |
+|---|---|
+| `checkout/success.tsx` | Order confirmation page. Receives `order: Order` prop. Pending state: pulsing `Clock` icon + skeleton rows with "Confirming your payment…". Paid state: `CheckCircle`, order number in `font-mono`, `Badge` with status, item list (name, SKU × qty, line total), grand total row, "View order history" link to `/orders`. `statusConfig` maps `OrderStatus` to badge label + variant. |
+| `checkout/cancel.tsx` | Checkout cancelled page. `XCircle` icon, message, "Back to cart" button via `cartRoute.url()`. Cart is untouched. |
 
 **Cart `errors.cart`:** `CartService` throws `CartException` on business rule violations; `CartController` catches it and calls `back()->withErrors(['cart' => $e->getMessage()])`. The cart page surfaces this above the item list.
 
@@ -199,6 +205,25 @@ type Can = {
 };  // gates shared via Inertia; auto-derived from permissions table in HandleInertiaRequests
 
 type Auth = { user: User; can: Can };
+
+type CartItem = { id, cart_id, product_id, quantity, product?: Product | null, created_at, updated_at };
+type Cart = { id, user_id: number | null, items: CartItem[], created_at, updated_at };
+
+type OrderStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'expired';
+
+type OrderItem = {
+    id: number; order_id: number; product_id: number | null;
+    product_name: string; product_sku: string; product_type: string;
+    price: number; quantity: number;  // price in cents
+    product?: Product | null; created_at: string; updated_at: string;
+};
+
+type Order = {
+    id: number; order_number: string; user_id: number | null;
+    status: OrderStatus; subtotal: number; total: number;  // cents
+    stripe_checkout_session_id: string | null; stripe_payment_intent_id: string | null;
+    items?: OrderItem[]; user?: User | null; created_at: string; updated_at: string;
+};
 
 type Passkey = { id, name, authenticator, created_at_diff, last_used_at_diff };
 ```
