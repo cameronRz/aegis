@@ -5,12 +5,21 @@ use App\Models\Category;
 use App\Models\Permission;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\StripeService;
+use Mockery\MockInterface;
+use Stripe\Price;
+use Stripe\Product as StripeProduct;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 beforeEach(function () {
     $this->withoutVite();
+
+    $this->mock(StripeService::class, function (MockInterface $mock) {
+        $mock->allows('createProduct')->andReturn(StripeProduct::constructFrom(['id' => 'prod_test123']));
+        $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
+    });
 
     $this->admin = User::factory()->create(['role' => Role::Admin]);
     $this->viewPermission = Permission::create([

@@ -5,8 +5,17 @@ use App\Models\Cart;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\CartService;
+use App\Services\StripeService;
+use Mockery\MockInterface;
+use Stripe\Price;
+use Stripe\Product as StripeProduct;
 
 beforeEach(function () {
+    $this->mock(StripeService::class, function (MockInterface $mock) {
+        $mock->allows('createProduct')->andReturn(StripeProduct::constructFrom(['id' => 'prod_test123']));
+        $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
+    });
+
     $this->service = app(CartService::class);
     $this->user = User::factory()->create();
     $this->cart = Cart::factory()->create(['user_id' => $this->user->id]);

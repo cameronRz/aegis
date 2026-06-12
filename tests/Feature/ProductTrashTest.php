@@ -3,8 +3,12 @@
 use App\Enum\Role;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\StripeService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Mockery\MockInterface;
+use Stripe\Price;
+use Stripe\Product as StripeProduct;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\delete;
@@ -14,6 +18,12 @@ use function Pest\Laravel\post;
 beforeEach(function () {
     $this->withoutVite();
     Storage::fake('public');
+
+    $this->mock(StripeService::class, function (MockInterface $mock) {
+        $mock->allows('createProduct')->andReturn(StripeProduct::constructFrom(['id' => 'prod_test123']));
+        $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
+        $mock->allows('archiveProduct');
+    });
 
     $this->admin = User::factory()->create(['role' => Role::Admin]);
     $this->user = User::factory()->create(['role' => Role::User]);
