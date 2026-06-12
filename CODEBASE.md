@@ -20,9 +20,35 @@ Aegis is a B2B admin and client portal for small business owners. Admins list pr
 | Routing | Named routes + Wayfinder for typed TS route functions |
 | Styling | Tailwind CSS v4 (OKLch design tokens, dark mode) |
 | Testing | Pest v4 |
-| DB | MySQL/SQLite per env |
+| DB | PostgreSQL (Docker via Sail) |
 
 The app is a classic Inertia SPA: Laravel handles routing, auth, and data; React renders the UI with no full-page reloads. Pages live in `resources/js/pages/`. Wayfinder auto-generates typed functions from Laravel controllers/routes — import from `@/actions/` (controllers) or `@/routes/` (named routes).
+
+---
+
+## Development Environment (Sail)
+
+The app runs in Docker via Laravel Sail. All commands must be prefixed with `./vendor/bin/sail` (or `sail` if you've configured the shell alias).
+
+| Instead of | Use |
+|---|---|
+| `php artisan <cmd>` | `./vendor/bin/sail artisan <cmd>` |
+| `composer <cmd>` | `./vendor/bin/sail composer <cmd>` |
+| `npm <cmd>` | `./vendor/bin/sail npm <cmd>` |
+| `php artisan tinker` | `./vendor/bin/sail tinker` |
+| `php artisan test` | `./vendor/bin/sail test` |
+| `vendor/bin/pint` | `./vendor/bin/sail php vendor/bin/pint` |
+
+**Starting / stopping:**
+```bash
+./vendor/bin/sail up -d   # start in background
+./vendor/bin/sail stop    # stop containers
+./vendor/bin/sail shell   # bash session inside the container
+```
+
+**Shell alias (recommended):** Add `alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'` to `~/.zshrc` or `~/.bashrc` so you can type `sail` instead of `./vendor/bin/sail`.
+
+**Mailpit** — intercepts all outgoing email during local development. UI available at [http://localhost:8025](http://localhost:8025). Configured in `.env` with `MAIL_HOST=mailpit`, `MAIL_PORT=1025`, `MAIL_ENCRYPTION=null`.
 
 ---
 
