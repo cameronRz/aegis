@@ -25,6 +25,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 | `two_factor_recovery_codes` | text\|null | Fortify managed |
 | `two_factor_confirmed_at` | timestamp\|null | |
 | `remember_token` | string\|null | |
+| `stripe_customer_id` | string\|null | unique; set on registration and admin user creation |
 
 **Appended attributes:**
 - `full_name` — computed: `"{first_name} {last_name}"`
@@ -38,7 +39,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 - `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then checks `$this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value)` (in-memory, no additional DB query once loaded)
 - `assignableRoles(): Role[]` — returns the Role cases this user is allowed to assign to others. `site_admin` gets all roles; everyone else gets `[Manager, User]`. Used by `UserController`, `StoreUserRequest`, and `UpdateUserRequest` — call `array_column($user->assignableRoles(), 'value')` to get string values for validation/view props.
 
-**Fillable:** `first_name`, `last_name`, `email`, `password` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
+**Fillable:** `first_name`, `last_name`, `email`, `password`, `stripe_customer_id` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `TwoFactorAuthenticatable`
 
@@ -66,9 +67,11 @@ Represents items available for purchase. Supports physical goods, digital downlo
 | `track_inventory` | boolean | default false |
 | `sort_order` | int | default 0; auto-assigned via `Sortable` trait |
 | `image` | string\|null | path under `storage/app/public/products/`; null if no image uploaded |
+| `stripe_product_id` | string\|null | Stripe Product ID; set by `ProductObserver` on creation |
+| `stripe_price_id` | string\|null | Stripe Price ID; set by `ProductObserver` on creation; rotated when price/interval changes |
 | `deleted_at` | timestamp\|null | soft deletes |
 
-**Fillable:** `category_id`, `name`, `type`, `sku`, `is_active`, `description`, `price`, `price_type`, `billing_interval`, `billing_interval_count`, `trial_period_days`, `stock_quantity`, `track_inventory`, `sort_order`, `image`
+**Fillable:** `category_id`, `name`, `type`, `sku`, `is_active`, `description`, `price`, `price_type`, `billing_interval`, `billing_interval_count`, `trial_period_days`, `stock_quantity`, `track_inventory`, `sort_order`, `image`, `stripe_product_id`, `stripe_price_id`
 
 **Casts:** `type` → `ProductType`, `price_type` → `PriceType`, `billing_interval` → `BillingInterval`, `is_active` → `boolean`, `track_inventory` → `boolean`
 
@@ -276,17 +279,66 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 - Subscription products: max quantity of 1 (across existing + new)
 - Physical products with `track_inventory`: `stock_quantity` must cover requested quantity
 
+## Stripe Integration
+
+### `StripeService` (`app/Services/StripeService.php`)
+
+Wraps the Stripe PHP SDK (`stripe/stripe-php ^20`). **All Stripe API calls go through here** — never call `\Stripe\*` directly from controllers or observers.
+
+Bound as a singleton in `AppServiceProvider::register()` with a pinned API version (`2024-06-20`) and key from `config('services.stripe.secret')`.
+
+| Method | Returns | Notes |
+|---|---|---|
+| `createCustomer(User)` | `Customer` | Creates Stripe customer with user's name and email |
+| `createProduct(Product)` | `StripeProduct` | Creates Stripe product with name and description |
+| `createPrice(Product, string $stripeProductId)` | `Price` | One-time or recurring; maps `BillingInterval` to Stripe intervals |
+| `archivePrice(string $stripePriceId)` | `void` | Sets `active: false` — prices are immutable, archive before replacing |
+| `archiveProduct(string $stripeProductId)` | `void` | Sets `active: false` on the Stripe product |
+| `updateProduct(string $stripeProductId, array)` | `StripeProduct` | Updates name/description on the Stripe product |
+| `createCheckoutSession(array)` | `CheckoutSession` | Passes raw params; built by `CheckoutController` |
+| `retrieveCheckoutSession(string $sessionId)` | `CheckoutSession` | |
+| `cancelSubscription(string $id, bool $atPeriodEnd=true)` | `Subscription` | Sets `cancel_at_period_end` |
+| `createBillingPortalSession(string $customerId, string $returnUrl)` | `BillingPortalSession` | |
+| `constructEvent(string $payload, string $signature)` | `Event` | Verifies webhook signature using `STRIPE_WEBHOOK_SECRET` |
+
+**Error handling:** all methods declare `@throws ApiErrorException`. Callers decide whether to surface the error (checkout) or swallow it (registration, observer). Errors are logged to `Log::channel('stripe')`.
+
+**`BillingInterval` → Stripe interval mapping:** `Weekly` → `week`, `Monthly` → `month`, `Yearly` → `year`.
+
+**Mocking in tests:** `StripeService` is not `readonly class` (Mockery subclasses it). Use `$this->mock(StripeService::class, fn (MockInterface $mock) => ...)` in each test file's `beforeEach` — the global Pest.php hook does not reliably intercept before factory creates. For tests that just need to prevent real API calls (fixture-only product creation), use `$mock->allows(...)`. For tests asserting Stripe behaviour, use `$mock->expects(...)->once()`.
+
+### `ProductObserver` (`app/Observers/ProductObserver.php`)
+
+Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver::class)`. Injects `StripeService`.
+
+| Event | Behaviour |
+|---|---|
+| `created` | `createProduct` → `createPrice` → saves both IDs back via `withoutEvents()` to avoid recursive observer trigger |
+| `updated` | If `name`/`description` changed: `updateProduct`. If `price`/`billing_interval`/`billing_interval_count` changed: `archivePrice` (old) → `createPrice` → save new `stripe_price_id` via `withoutEvents()`. Skips if `stripe_product_id` is null. |
+| `forceDeleted` | `archiveProduct` (sets active: false on Stripe). Skips if `stripe_product_id` is null. Soft-delete does NOT archive — product may be restored. |
+
+**Key rules:**
+- Stripe Prices are immutable — never edit, always archive + create new when price/interval changes
+- Use `$product->withoutEvents(fn () => $product->update([...]))` when saving Stripe IDs back to avoid re-triggering the observer
+- `wasChanged(['price', 'billing_interval', 'billing_interval_count'])` detects price-affecting changes in `updated`
+- All failures are caught, logged to `Log::channel('stripe')`, and do not bubble — the product save must not be rolled back by a Stripe failure
+
+**`stripe_customer_id` on admin-created users:** `UserController::store()` also calls `StripeService::createCustomer()` after `User::create()`, following the same catch-log-continue pattern as `CreateNewUser`.
+
+---
+
 ## Database Tables
 
 | Table | Purpose |
 |---|---|
-| `users` | All user accounts (staff and future clients) |
+| `users` | All user accounts (staff and future clients); includes `stripe_customer_id` |
 | `permissions` | Named permission definitions |
 | `user_permissions` | Many-to-many: which users have which permissions |
 | `categories` | Product category tree (self-referential via `parent_id`) |
-| `products` | Products available for purchase (physical, digital, subscription) |
+| `products` | Products available for purchase (physical, digital, subscription); includes `stripe_product_id`, `stripe_price_id` |
 | `carts` | One cart per user (`user_id` nullable, nullOnDelete) |
 | `cart_items` | Line items in a cart: `cart_id`, `product_id`, `quantity`; unique(`cart_id`, `product_id`) |
+| `stripe.log` | Dedicated daily log channel (`storage/logs/stripe-YYYY-MM-DD.log`) for all Stripe errors; 14-day rotation |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
 | `sessions` | Database-backed sessions |
@@ -306,7 +358,7 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 - Passkey RP ID: derived from `APP_URL`
 
 Actions (in `app/Actions/Fortify/`):
-- `CreateNewUser` — validates and creates new users
+- `CreateNewUser` — validates and creates new users; after `User::create()`, calls `StripeService::createCustomer()` synchronously and saves `stripe_customer_id`. Stripe failure is caught, logged to the `stripe` channel, and does not block registration — the ID is created lazily at checkout if null.
 - `ResetUserPassword` — handles password reset
 
 ---
