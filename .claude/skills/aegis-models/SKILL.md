@@ -279,6 +279,37 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 - Subscription products: max quantity of 1 (across existing + new)
 - Physical products with `track_inventory`: `stock_quantity` must cover requested quantity
 
+---
+
+## Order Models
+
+**`OrderStatus`** enum (`app/Enum/OrderStatus.php`): `Pending`, `Paid`, `Failed`, `Refunded`, `Expired`
+
+**`Order`** (`app/Models/Order.php`)
+- `belongsTo(User::class)` (nullable)
+- `hasMany(OrderItem::class)`
+- Fillable: `user_id`, `status`, `subtotal`, `total`, `stripe_checkout_session_id`, `stripe_payment_intent_id`
+- Casts: `status` → `OrderStatus`, `subtotal`/`total` → `integer`
+- `order_number` auto-generated in `booted()` `created` event: `'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT)`. Column is nullable in the DB to allow the initial insert, then immediately filled via `saveQuietly()`.
+
+**`OrderItem`** (`app/Models/OrderItem.php`)
+- `belongsTo(Order::class)`
+- `belongsTo(Product::class)` (nullable — product may be soft-deleted)
+- Fillable: `order_id`, `product_id`, `product_name`, `product_sku`, `product_type`, `price`, `quantity`
+- Snapshot columns (`product_name`, `product_sku`, `product_type`, `price`) preserve the product state at time of purchase — never read from the live `Product` for order display.
+
+**Factories:** `OrderFactory` (states: `paid()`, `expired()`); `OrderItemFactory` (state: `forProduct(Product $product)`)
+
+**`CheckoutController`** (`app/Http/Controllers/CheckoutController.php`)
+
+- **`store()`**: validates cart not empty → all items active → all items have `stripe_price_id` → lazy Stripe customer creation → DB transaction creates `Order` + `OrderItem` snapshots → builds Stripe session params (payment vs subscription mode, trial days, one-time items in `add_invoice_items`) → creates Stripe session → saves `stripe_checkout_session_id` → `Inertia::location($session->url)`
+- **`success()`**: looks up `Order` by `stripe_checkout_session_id` from `?session_id=` query param → enforces ownership → renders `checkout/success`; returns 400 if no `session_id`
+- **`cancel()`**: renders `checkout/cancel`; cart is untouched
+
+**`ExpireStaleOrders`** command (`app/Console/Commands/ExpireStaleOrders.php`): bulk-updates `pending` orders older than 25 hours to `expired`. Scheduled hourly in `routes/console.php`. Does not cancel Stripe sessions (they auto-expire after 24h).
+
+---
+
 ## Stripe Integration
 
 ### `StripeService` (`app/Services/StripeService.php`)
@@ -338,6 +369,8 @@ Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver
 | `products` | Products available for purchase (physical, digital, subscription); includes `stripe_product_id`, `stripe_price_id` |
 | `carts` | One cart per user (`user_id` nullable, nullOnDelete) |
 | `cart_items` | Line items in a cart: `cart_id`, `product_id`, `quantity`; unique(`cart_id`, `product_id`) |
+| `orders` | Purchase records: `order_number` (auto-generated `ORD-000001` in `created` event), `user_id` (nullable, nullOnDelete), `status` (`OrderStatus` enum), `subtotal`/`total` (cents), `stripe_checkout_session_id`, `stripe_payment_intent_id` |
+| `order_items` | Snapshot line items per order: `order_id` (cascadeDelete), `product_id` (nullable, nullOnDelete), `product_name`, `product_sku`, `product_type`, `price` (cents), `quantity` |
 | `stripe.log` | Dedicated daily log channel (`storage/logs/stripe-YYYY-MM-DD.log`) for all Stripe errors; 14-day rotation |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
