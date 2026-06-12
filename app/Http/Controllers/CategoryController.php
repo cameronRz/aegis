@@ -19,8 +19,8 @@ class CategoryController extends Controller
             ->when(
                 $request->input('search'),
                 fn ($query, string $search) => $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('slug', 'like', "%{$search}%");
+                    $q->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('slug', 'ilike', "%{$search}%");
                 })
             )
             ->ordered()

@@ -68,8 +68,8 @@ class Product extends Model
     {
         $query->when($search, function (Builder $q, string $term): void {
             $q->where(function (Builder $inner) use ($term): void {
-                $inner->where('name', 'like', "%{$term}%")
-                    ->orWhere('sku', 'like', "%{$term}%");
+                $inner->where('name', 'ilike', "%{$term}%")
+                    ->orWhere('sku', 'ilike', "%{$term}%");
             });
         });
     }

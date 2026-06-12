@@ -380,7 +380,7 @@ const [priceDisplay, setPriceDisplay] = useState(data.price > 0 ? (data.price / 
 
 Two distinct call forms exist — mixing them up compiles silently and fails at runtime.
 
-**Regenerating Wayfinder:** Always run `php artisan wayfinder:generate --with-form`. The `--with-form` flag is required because `vite.config.ts` sets `formVariants: true`. Omitting it strips `.form()` from every action file, breaking any page that uses the Inertia `<Form>` component (login, register, settings, etc.).
+**Regenerating Wayfinder:** Always run `./vendor/bin/sail artisan wayfinder:generate --with-form`. The `--with-form` flag is required because `vite.config.ts` sets `formVariants: true`. Omitting it strips `.form()` from every action file, breaking any page that uses the Inertia `<Form>` component (login, register, settings, etc.).
 
 **No-arg actions** (e.g. `store`, `create`, `index`): the action is not called first; `.url()` is a method on the function itself.
 ```ts
