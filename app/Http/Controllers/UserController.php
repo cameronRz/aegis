@@ -81,7 +81,7 @@ class UserController extends Controller
             $customer = $this->stripe->createCustomer($user);
             $user->stripe_customer_id = $customer->id;
         } catch (ApiErrorException $e) {
-            Log::error('Failed to create Stripe customer for admin-created user', [
+            Log::channel('stripe')->error('Failed to create Stripe customer for admin-created user', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);

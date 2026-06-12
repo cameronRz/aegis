@@ -41,7 +41,7 @@ class CreateNewUser implements CreatesNewUsers
             $user->stripe_customer_id = $customer->id;
             $user->save();
         } catch (ApiErrorException $e) {
-            Log::error('Failed to create Stripe customer on registration', [
+            Log::channel('stripe')->error('Failed to create Stripe customer on registration', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);

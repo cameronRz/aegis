@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Enum\PermissionName;
+use App\Models\Product;
 use App\Models\User;
+use App\Observers\ProductObserver;
 use App\Services\StripeService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -36,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Product::observe(ProductObserver::class);
 
         Gate::define('admin', fn (User $user) => $user->isAdmin());
 
