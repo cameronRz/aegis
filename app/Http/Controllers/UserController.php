@@ -75,7 +75,7 @@ class UserController extends Controller
 
         return Inertia::render('users/create', [
             'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
-            'permissionSets' => PermissionSet::orderBy('name')->get(['id', 'name']),
+            'permissionSets' => PermissionSet::orderBy('name')->with('permissions')->get(['id', 'name']),
         ]);
     }
 
@@ -125,7 +125,7 @@ class UserController extends Controller
         return Inertia::render('users/edit', [
             'user' => $user,
             'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
-            'permissionSets' => PermissionSet::orderBy('name')->get(['id', 'name']),
+            'permissionSets' => PermissionSet::orderBy('name')->with('permissions')->get(['id', 'name']),
             'currentPermissionSetId' => $user->userPermissionSet?->permission_set_id,
         ]);
     }
@@ -163,6 +163,8 @@ class UserController extends Controller
 
     public function show(Request $request, User $user): Response
     {
+        $user->load('permissionSet.permissions');
+
         $viewer = $request->user();
 
         return Inertia::render('users/show', [

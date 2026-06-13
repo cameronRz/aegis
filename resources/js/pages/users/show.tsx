@@ -26,6 +26,8 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
         });
     }
 
+    const permissionSet = user.permission_set;
+
     return (
         <>
             <Head title={user.full_name} />
@@ -57,6 +59,28 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
                             </button>
                         </CardContent>
                     )}
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Permission Set</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {permissionSet ? (
+                            <div className="flex flex-col gap-1">
+                                <span className="font-medium">{permissionSet.name}</span>
+                                {permissionSet.permissions?.length ? (
+                                    <span className="text-muted-foreground text-sm">
+                                        {permissionSet.permissions
+                                            .map((p) => p.display_name)
+                                            .join(', ')}
+                                    </span>
+                                ) : null}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground text-sm">No permission set assigned.</p>
+                        )}
+                    </CardContent>
                 </Card>
             </div>
 

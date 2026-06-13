@@ -31,6 +31,7 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
+    permission_set?: PermissionSet | null;
     deleted_at: string | null;
     created_at: string;
     updated_at: string;
