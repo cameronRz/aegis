@@ -10,7 +10,6 @@ use Stripe\Exception\ApiErrorException;
 
 class DatabaseSeeder extends Seeder
 {
-
     /**
      * Seed the application's database.
      */
@@ -39,15 +38,6 @@ class DatabaseSeeder extends Seeder
         $admin->save();
         $this->createStripeCustomer($stripe, $admin);
 
-        $manager = User::factory()->create([
-            'first_name' => 'Jack',
-            'last_name' => 'Penny',
-            'email' => 'jack@email.com',
-        ]);
-        $manager->role = Role::Manager;
-        $manager->save();
-        $this->createStripeCustomer($stripe, $manager);
-
         $benny = User::factory()->create([
             'first_name' => 'Benny',
             'last_name' => 'Bull',
@@ -56,8 +46,7 @@ class DatabaseSeeder extends Seeder
         $this->createStripeCustomer($stripe, $benny);
 
         User::factory(5)->create(['role' => Role::Admin]);
-        User::factory(20)->create(['role' => Role::Manager]);
-        User::factory(100)->create();
+        User::factory(120)->create();
 
         // Permissions
         $this->call(PermissionSeeder::class);

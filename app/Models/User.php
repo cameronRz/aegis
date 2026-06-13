@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -54,9 +55,7 @@ class User extends Authenticatable implements PasskeyUser
 
     public function scopeVisibleTo(Builder $query, User $viewer): void
     {
-        $query
-            ->when($viewer->role !== Role::SiteAdmin, fn ($q) => $q->where('role', '!=', Role::SiteAdmin->value))
-            ->when($viewer->role === Role::Manager, fn ($q) => $q->where('role', '!=', Role::Admin->value));
+        $query->when($viewer->role !== Role::SiteAdmin, fn ($q) => $q->where('role', '!=', Role::SiteAdmin->value));
     }
 
     public function scopeSearch(Builder $query, ?string $search): void
@@ -70,11 +69,21 @@ class User extends Authenticatable implements PasskeyUser
         });
     }
 
-    public function permissions(): BelongsToMany
+    public function userPermissionSet(): HasOne
     {
-        return $this->belongsToMany(Permission::class, 'user_permissions')
-            ->withPivot('granted_by')
-            ->withTimestamps();
+        return $this->hasOne(UserPermissionSet::class);
+    }
+
+    public function permissionSet(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            PermissionSet::class,
+            UserPermissionSet::class,
+            'user_id',
+            'id',
+            'id',
+            'permission_set_id'
+        );
     }
 
     public function isAdmin(): bool
@@ -92,7 +101,7 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->role === Role::SiteAdmin
             ? Role::cases()
-            : [Role::Manager, Role::User];
+            : [Role::User];
     }
 
     public function hasPermission(PermissionName $permission): bool
@@ -101,7 +110,10 @@ class User extends Authenticatable implements PasskeyUser
             return true;
         }
 
-        return $this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value);
+        $set = $this->loadMissing('permissionSet')->permissionSet;
+
+        return $set !== null
+            && $set->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value);
     }
 
     protected function fullName(): Attribute
