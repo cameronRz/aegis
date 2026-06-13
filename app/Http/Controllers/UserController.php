@@ -112,8 +112,6 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $user->load('permissions');
-
         $viewer = $request->user();
 
         return Inertia::render('users/edit', [
@@ -125,8 +123,6 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $this->authorize('update', $user);
-
-        $viewer = $request->user();
 
         $user->first_name = $request->validated('first_name');
         $user->last_name = $request->validated('last_name');
@@ -148,8 +144,6 @@ class UserController extends Controller
 
     public function show(Request $request, User $user): Response
     {
-        $user->load('permissions');
-
         $viewer = $request->user();
 
         return Inertia::render('users/show', [

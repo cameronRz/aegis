@@ -2,24 +2,21 @@ import { Head, useForm } from '@inertiajs/react';
 import { update as updateUser } from '@/actions/App/Http/Controllers/UserController';
 import { Button } from '@/components/ui/button';
 import { users as adminUsersRoute } from '@/routes/admin';
-import type { Permission, Role, User } from '@/types';
+import type { Role, User } from '@/types';
 import { UserFormFields } from './user-form-fields';
 import type { UserFormData } from './user-form-fields';
 
 type Props = {
-    user: User & { permissions: Permission[] };
+    user: User;
     availableRoles: Role[];
-    allPermissions: Permission[];
-    canAssignPermissions: boolean;
 };
 
-export default function UserEdit({ user, availableRoles, allPermissions, canAssignPermissions }: Props) {
+export default function UserEdit({ user, availableRoles }: Props) {
     const { data, setData, patch, processing, errors } = useForm<UserFormData>({
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
         role: user.role,
-        permissions: user.permissions.map((p) => p.id),
     });
 
     return (
@@ -37,8 +34,6 @@ export default function UserEdit({ user, availableRoles, allPermissions, canAssi
                     setData={setData}
                     errors={errors}
                     availableRoles={availableRoles}
-                    allPermissions={allPermissions}
-                    canAssignPermissions={canAssignPermissions}
                 />
 
                 <div className="flex items-center gap-4">
