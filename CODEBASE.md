@@ -20,7 +20,7 @@ Aegis is a B2B admin and client portal for small business owners. Admins list pr
 | Routing | Named routes + Wayfinder for typed TS route functions |
 | Styling | Tailwind CSS v4 (OKLch design tokens, dark mode) |
 | Testing | Pest v4 |
-| DB | PostgreSQL (Docker via Sail) |
+| DB | PostgreSQL via pgvector/pgvector:pg18 (Docker via Sail) |
 
 The app is a classic Inertia SPA: Laravel handles routing, auth, and data; React renders the UI with no full-page reloads. Pages live in `resources/js/pages/`. Wayfinder auto-generates typed functions from Laravel controllers/routes — import from `@/actions/` (controllers) or `@/routes/` (named routes).
 
@@ -49,6 +49,10 @@ The app runs in Docker via Laravel Sail. All commands must be prefixed with `./v
 **Shell alias (recommended):** Add `alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'` to `~/.zshrc` or `~/.bashrc` so you can type `sail` instead of `./vendor/bin/sail`.
 
 **Mailpit** — intercepts all outgoing email during local development. UI available at [http://localhost:8025](http://localhost:8025). Configured in `.env` with `MAIL_HOST=mailpit`, `MAIL_PORT=1025`, `MAIL_ENCRYPTION=null`.
+
+**pgvector** — the PostgreSQL image is `pgvector/pgvector:pg18`, which bundles the `vector` extension for future RAG/semantic search. The extension is enabled via `0001_01_01_000003_enable_pgvector_extension.php`, which runs before all application table migrations so any future table can add a `vector` column.
+
+**Reseeding and Stripe test data** — every `migrate:fresh --seed` creates new Stripe objects (customers, products, prices) without deleting the old ones. There is no meaningful rate limit concern (154 API calls per reseed is well under Stripe's 100 req/sec limit). The real consequence is **accumulating orphaned test objects** in the Stripe sandbox — old products, prices, and customers that the app no longer knows about. A few reseeds a day is fine; clean up the Stripe test dashboard periodically if it gets cluttered.
 
 ---
 
@@ -90,6 +94,7 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 
 ## Conventions
 
+- **`ILIKE` not `LIKE` for search** — PostgreSQL's `LIKE` is case-sensitive (unlike SQLite). All user-facing search queries must use `ilike` so searching "wireless" matches "Wireless Mouse". This applies to every `where('column', 'like', ...)` — always use `'ilike'` instead.
 - **Named routes always** — use `route('name')` in PHP, Wayfinder functions in TypeScript
 - **Breadcrumbs on every page** — set via `.layout` property on Inertia page components
 - **Pagination** — use `PaginatedData<T>` type for paginated responses; 15 per page standard
