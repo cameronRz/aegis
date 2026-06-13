@@ -2,6 +2,7 @@
 
 use App\Enum\Role;
 use App\Models\Permission;
+use App\Models\PermissionSet;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -11,10 +12,10 @@ use function Pest\Laravel\patch;
 beforeEach(function () {
     $this->withoutVite();
 
-    $this->editUserPermission = Permission::create([
+    $this->editPermission = Permission::create([
         'name' => 'edit_user',
         'display_name' => 'Edit Users',
-        'description' => 'Edit existing user accounts.',
+        'description' => null,
     ]);
 
     $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
@@ -42,9 +43,12 @@ it('allows admins to access the edit page', function () {
     actingAs($this->admin)->get("/admin/users/{$this->target->id}/edit")->assertOk();
 });
 
-it('allows users with the edit_user permission to access the edit page', function () {
+it('allows users with the edit_user permission set to access the edit page', function () {
+    $set = PermissionSet::create(['name' => 'Staff']);
+    $set->permissions()->sync([$this->editPermission->id]);
+
     $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->editUserPermission->id, ['granted_by' => $this->admin->id]);
+    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
 
     actingAs($user)->get("/admin/users/{$this->target->id}/edit")->assertOk();
 });
@@ -65,47 +69,30 @@ it('allows a site admin to edit another admin', function () {
 
 // --- Role availability on the edit page ---
 
-it('passes all four roles to site admins', function () {
+it('passes all three roles to site admins', function () {
     actingAs($this->siteAdmin)
         ->get("/admin/users/{$this->target->id}/edit")
-        ->assertInertia(
-            fn ($page) => $page
-                ->component('users/edit')
-                ->where('availableRoles', ['site_admin', 'admin', 'manager', 'user'])
+        ->assertInertia(fn ($page) => $page
+            ->component('users/edit')
+            ->where('availableRoles', ['site_admin', 'admin', 'user'])
         );
 });
 
-it('passes only manager and user roles to admins', function () {
+it('passes only user role to admins', function () {
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
-        ->assertInertia(
-            fn ($page) => $page
-                ->where('availableRoles', ['manager', 'user'])
-                ->where('canAssignPermissions', true)
-        );
-});
-
-it('passes only manager and user roles to edit_user permission holders', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->editUserPermission->id, ['granted_by' => $this->admin->id]);
-
-    actingAs($user)
-        ->get("/admin/users/{$this->target->id}/edit")
-        ->assertInertia(
-            fn ($page) => $page
-                ->where('availableRoles', ['manager', 'user'])
-                ->where('canAssignPermissions', false)
+        ->assertInertia(fn ($page) => $page
+            ->where('availableRoles', ['user'])
         );
 });
 
 it('pre-fills the form with the existing user data', function () {
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
-        ->assertInertia(
-            fn ($page) => $page
-                ->where('user.id', $this->target->id)
-                ->where('user.first_name', $this->target->first_name)
-                ->where('user.email', $this->target->email)
+        ->assertInertia(fn ($page) => $page
+            ->where('user.id', $this->target->id)
+            ->where('user.first_name', $this->target->first_name)
+            ->where('user.email', $this->target->email)
         );
 });
 
@@ -116,7 +103,7 @@ it('updates a user and redirects to their show page', function () {
         'first_name' => 'Updated',
         'last_name' => 'Name',
         'email' => 'updated@example.com',
-        'role' => 'manager',
+        'role' => 'user',
     ]);
 
     $response->assertRedirect("/admin/users/{$this->target->id}");
@@ -125,7 +112,7 @@ it('updates a user and redirects to their show page', function () {
     expect($this->target->first_name)->toBe('Updated')
         ->and($this->target->last_name)->toBe('Name')
         ->and($this->target->email)->toBe('updated@example.com')
-        ->and($this->target->role)->toBe(Role::Manager);
+        ->and($this->target->role)->toBe(Role::User);
 });
 
 it('blocks self-editing on update', function () {
@@ -186,86 +173,4 @@ it('allows the same email to be submitted unchanged', function () {
         'email' => $this->target->email,
         'role' => 'user',
     ])->assertRedirect();
-});
-
-it('allows admins to sync permissions on update', function () {
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
-        'first_name' => $this->target->first_name,
-        'last_name' => $this->target->last_name,
-        'email' => $this->target->email,
-        'role' => 'user',
-        'permissions' => [$viewPermission->id],
-    ]);
-
-    expect($this->target->fresh()->permissions)->toHaveCount(1)
-        ->and($this->target->fresh()->permissions->first()->name)->toBe('view_users');
-});
-
-it('syncs away permissions that are removed on update', function () {
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    $this->target->permissions()->attach($viewPermission->id, ['granted_by' => $this->admin->id]);
-
-    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
-        'first_name' => $this->target->first_name,
-        'last_name' => $this->target->last_name,
-        'email' => $this->target->email,
-        'role' => 'user',
-        'permissions' => [],
-    ]);
-
-    expect($this->target->fresh()->permissions)->toBeEmpty();
-});
-
-it('preserves granted_by for existing permissions on update', function () {
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    $originalGrantor = User::factory()->create(['role' => Role::Admin]);
-    $this->target->permissions()->attach($viewPermission->id, ['granted_by' => $originalGrantor->id]);
-
-    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
-        'first_name' => $this->target->first_name,
-        'last_name' => $this->target->last_name,
-        'email' => $this->target->email,
-        'role' => 'user',
-        'permissions' => [$viewPermission->id],
-    ]);
-
-    $pivot = $this->target->fresh()->permissions()->withPivot('granted_by')->first()->pivot;
-    expect($pivot->granted_by)->toBe($originalGrantor->id);
-});
-
-it('prevents non-admins with edit_user permission from syncing permissions', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->editUserPermission->id, ['granted_by' => $this->admin->id]);
-
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    actingAs($user)->patch("/admin/users/{$this->target->id}", [
-        'first_name' => $this->target->first_name,
-        'last_name' => $this->target->last_name,
-        'email' => $this->target->email,
-        'role' => 'user',
-        'permissions' => [$viewPermission->id],
-    ]);
-
-    expect($this->target->fresh()->permissions)->toBeEmpty();
 });

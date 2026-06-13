@@ -3,6 +3,7 @@
 use App\Enum\Role;
 use App\Models\Category;
 use App\Models\Permission;
+use App\Models\PermissionSet;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\StripeService;
@@ -53,7 +54,9 @@ it('allows an admin to view products', function () {
 
 it('allows a user with view_products permission to view products', function () {
     $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->viewPermission->id, ['granted_by' => $this->admin->id]);
+    $set = PermissionSet::create(['name' => 'Staff']);
+    $set->permissions()->sync([$this->viewPermission->id]);
+    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => $this->admin->id]);
 
     Product::factory(2)->create();
 

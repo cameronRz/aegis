@@ -3,6 +3,7 @@
 use App\Enum\Role;
 use App\Models\Category;
 use App\Models\Permission;
+use App\Models\PermissionSet;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\StripeService;
@@ -61,7 +62,9 @@ it('renders the show page for an admin', function () {
 
 it('renders the show page for a user with view_products permission', function () {
     $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->viewPermission->id, ['granted_by' => $this->admin->id]);
+    $set = PermissionSet::create(['name' => 'Staff']);
+    $set->permissions()->sync([$this->viewPermission->id]);
+    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => $this->admin->id]);
 
     actingAs($user)
         ->get("/admin/products/{$this->product->id}")

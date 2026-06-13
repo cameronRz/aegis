@@ -2,6 +2,7 @@
 
 use App\Enum\Role;
 use App\Models\Permission;
+use App\Models\PermissionSet;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -78,20 +79,20 @@ it('searches by email', function () {
         );
 });
 
-it('hides site_admin and admin users from managers', function () {
-    $permission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-    $manager = User::factory()->create(['role' => Role::Manager]);
-    $manager->permissions()->attach($permission->id, ['granted_by' => $this->admin->id]);
+it('hides site_admin users from users with view_users permission set', function () {
+    $permission = Permission::create(['name' => 'view_users', 'display_name' => 'View Users', 'description' => null]);
+    $set = PermissionSet::create(['name' => 'Staff']);
+    $set->permissions()->sync([$permission->id]);
+
+    $staff = User::factory()->create(['role' => Role::User]);
+    $staff->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+
     User::factory(2)->create(['role' => Role::User]);
 
-    actingAs($manager)
+    actingAs($staff)
         ->get('/admin/users')
         ->assertInertia(
-            fn ($page) => $page->has('users.data', 3) // manager + 2 users, site_admin and admin excluded
+            fn ($page) => $page->has('users.data', 4) // staff + 2 users + admin; site_admin excluded
         );
 });
 

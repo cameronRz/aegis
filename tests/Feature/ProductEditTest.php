@@ -3,6 +3,7 @@
 use App\Enum\Role;
 use App\Models\Category;
 use App\Models\Permission;
+use App\Models\PermissionSet;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\StripeService;
@@ -60,7 +61,9 @@ it('renders the edit page for an admin', function () {
 
 it('renders the edit page for a user with edit_product permission', function () {
     $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->editPermission->id, ['granted_by' => $this->admin->id]);
+    $set = PermissionSet::create(['name' => 'Staff']);
+    $set->permissions()->sync([$this->editPermission->id]);
+    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => $this->admin->id]);
 
     actingAs($user)
         ->get("/admin/products/{$this->product->id}/edit")
