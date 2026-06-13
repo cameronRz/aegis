@@ -48,6 +48,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         });
 
+        // Literal segments declared before parametric {user} routes
+        Route::middleware('can:admin')->group(function () {
+            Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+            Route::delete('users/{user}/force', [UserController::class, 'forceDestroy'])
+                ->withTrashed()
+                ->name('users.force-destroy');
+        });
+
+        Route::middleware('can:delete_user')->group(function () {
+            Route::post('users/{user}/restore', [UserController::class, 'restore'])
+                ->withTrashed()
+                ->name('users.restore');
+        });
+
         Route::middleware('can:view_users')->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });

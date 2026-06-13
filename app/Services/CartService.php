@@ -59,6 +59,10 @@ class CartService
     {
         $product = $item->product;
 
+        if ($product === null) {
+            throw CartException::productUnavailable();
+        }
+
         if ($product->type === ProductType::Subscription && $quantity > 1) {
             throw CartException::subscriptionQuantityExceeded();
         }
@@ -89,7 +93,9 @@ class CartService
 
     public function total(Cart $cart): int
     {
-        return $cart->items->sum(fn (CartItem $item) => $item->product->price * $item->quantity);
+        return $cart->items
+            ->filter(fn (CartItem $item) => $item->product !== null)
+            ->sum(fn (CartItem $item) => $item->product->price * $item->quantity);
     }
 
     public function isEmpty(Cart $cart): bool
@@ -100,7 +106,7 @@ class CartService
     public function hasSubscription(Cart $cart): bool
     {
         return $cart->items->contains(
-            fn (CartItem $item) => $item->product->type === ProductType::Subscription
+            fn (CartItem $item) => $item->product?->type === ProductType::Subscription
         );
     }
 

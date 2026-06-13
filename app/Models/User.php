@@ -9,11 +9,14 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -24,7 +27,15 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user) {
+            $user->passkeys()->delete();
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        });
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -39,6 +50,24 @@ class User extends Authenticatable implements PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'role' => Role::class,
         ];
+    }
+
+    public function scopeVisibleTo(Builder $query, User $viewer): void
+    {
+        $query
+            ->when($viewer->role !== Role::SiteAdmin, fn ($q) => $q->where('role', '!=', Role::SiteAdmin->value))
+            ->when($viewer->role === Role::Manager, fn ($q) => $q->where('role', '!=', Role::Admin->value));
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): void
+    {
+        $query->when($search, function ($q, string $term) {
+            $q->where(function ($inner) use ($term) {
+                $inner->where('first_name', 'ilike', "%{$term}%")
+                    ->orWhere('last_name', 'ilike', "%{$term}%")
+                    ->orWhere('email', 'ilike', "%{$term}%");
+            });
+        });
     }
 
     public function permissions(): BelongsToMany

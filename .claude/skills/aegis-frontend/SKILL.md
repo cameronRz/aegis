@@ -21,8 +21,9 @@ metadata:
 #### `users/`
 | File | Description |
 |---|---|
-| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
+| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged roles (`PRIVILEGED_ROLES`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
+| `users/trash.tsx` | Admin-only trash bin mirroring `products/trash.tsx`: paginated table of soft-deleted users with First Name, Last Name, Email, Role badge, Deleted date columns. Restore button (POST, `can:delete_user`, no confirmation). Permanently Delete button (`can:admin`) opens `ConfirmDialog`. Search by name/email. "Users" breadcrumb links back to the index. |
 | `users/create.tsx` | Create user form; uses `UserFormFields`; sends password reset email on creation |
 | `users/edit.tsx` | Edit user form; pre-fills from `user` prop; uses PATCH via `updateUser(user).url`; uses `UserFormFields`; self-editing blocked (403) |
 | `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type and `UserFormFields` component. Owns `roleLabels`, `togglePermission` logic, and the permissions card. Accepts `permissionsDescription?` to customise the card subtitle between create and edit contexts. Used by both `create.tsx` and `edit.tsx`. |
@@ -173,6 +174,7 @@ type User = {
     id, first_name, last_name, full_name, email,
     role: Role, avatar?, email_verified_at,
     two_factor_enabled?, permissions?: Permission[],
+    deleted_at: string | null,
     created_at, updated_at
 };
 
@@ -429,6 +431,13 @@ trashProducts.url()                 // GET /admin/products/trash        (no-arg,
 adminProductsRoute.trash.url()      // same, via named route
 restoreProduct(product).url         // POST /admin/products/{id}/restore (string property)
 forceDestroyProduct(product).url    // DELETE /admin/products/{id}/force (string property)
+
+import { trash as trashUsers, restore as restoreUser, forceDestroy as forceDestroyUser } from '@/actions/App/Http/Controllers/UserController';
+
+trashUsers.url()                    // GET /admin/users/trash           (no-arg, method on function)
+adminUsersRoute.trash.url()         // same, via named route
+restoreUser(user).url               // POST /admin/users/{id}/restore   (string property)
+forceDestroyUser(user).url          // DELETE /admin/users/{id}/force   (string property)
 
 import { edit as editCategory, update as updateCategory, destroy as destroyCategory } from '@/actions/App/Http/Controllers/CategoryController';
 

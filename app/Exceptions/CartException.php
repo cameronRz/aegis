@@ -20,4 +20,9 @@ class CartException extends RuntimeException
     {
         return new self("Only $available unit(s) available in stock.");
     }
+
+    public static function productUnavailable(): self
+    {
+        return new self('This item is no longer available.');
+    }
 }

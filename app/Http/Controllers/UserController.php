@@ -25,24 +25,8 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $users = User::query()
-            ->when(
-                auth()->user()->role !== Role::SiteAdmin,
-                fn ($query) => $query->where('role', '!=', Role::SiteAdmin->value)
-            )
-            ->when(
-                auth()->user()->role === Role::Manager,
-                fn ($query) => $query->where('role', '!=', Role::Admin->value)
-            )
-            ->when(
-                $request->input('search'),
-                function ($query, string $search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('first_name', 'ilike', "%{$search}%")
-                            ->orWhere('last_name', 'ilike', "%{$search}%")
-                            ->orWhere('email', 'ilike', "%{$search}%");
-                    });
-                }
-            )
+            ->visibleTo(auth()->user())
+            ->search($request->input('search'))
             ->paginate(15)
             ->withQueryString();
 
@@ -50,6 +34,39 @@ class UserController extends Controller
             'users' => $users,
             'filters' => $request->only('search'),
         ]);
+    }
+
+    public function trash(Request $request): Response
+    {
+        $users = User::onlyTrashed()
+            ->visibleTo(auth()->user())
+            ->search($request->input('search'))
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('users/trash', [
+            'users' => $users,
+            'filters' => $request->only('search'),
+        ]);
+    }
+
+    public function restore(User $user): RedirectResponse
+    {
+        $this->authorize('delete', $user);
+
+        $user->restore();
+
+        return redirect()->route('admin.users.trash');
+    }
+
+    public function forceDestroy(User $user): RedirectResponse
+    {
+        $this->authorize('delete', $user);
+
+        $user->forceDelete();
+
+        return redirect()->route('admin.users.trash');
     }
 
     public function create(Request $request): Response

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { users as adminUsersRoute } from '@/routes/admin';
+import { trash as usersTrashRoute } from '@/routes/admin/users';
 import { PRIVILEGED_ROLES } from '@/types';
 import type { Auth, PaginatedData, Role, User } from '@/types';
 
@@ -91,11 +92,21 @@ export default function UsersIndex({ users, filters }: Props) {
                         onChange={(e) => setSearch(e.target.value)}
                         className="max-w-sm"
                     />
-                    {auth.can.create_user && (
-                        <Button asChild>
-                            <Link href={createUser.url()}>Create User</Link>
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {auth.can.admin && (
+                            <Link
+                                href={usersTrashRoute.url()}
+                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                View Trash
+                            </Link>
+                        )}
+                        {auth.can.create_user && (
+                            <Button asChild>
+                                <Link href={createUser.url()}>Create User</Link>
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 <DataTable
