@@ -4,6 +4,7 @@ use App\Enum\Role;
 use App\Models\Permission;
 use App\Models\PermissionSet;
 use App\Models\User;
+use App\Models\UserPermissionSet;
 use App\Services\StripeService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
@@ -160,6 +161,46 @@ it('allows site admins to create users with any role', function () {
     ])->assertRedirect();
 
     expect(User::where('email', 'jane@example.com')->first()?->role)->toBe(Role::Admin);
+});
+
+it('passes permission sets to the create page', function () {
+    PermissionSet::factory()->create(['name' => 'Support Staff']);
+
+    actingAs($this->admin)
+        ->get('/admin/users/create')
+        ->assertInertia(fn ($page) => $page->has('permissionSets', 1));
+});
+
+it('assigns a permission set when creating a user', function () {
+    Notification::fake();
+
+    $set = PermissionSet::factory()->create();
+
+    actingAs($this->admin)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'role' => 'user',
+        'permission_set_id' => $set->id,
+    ])->assertRedirect();
+
+    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
+    expect(UserPermissionSet::where('user_id', $newUser->id)->exists())->toBeTrue();
+    expect($newUser->userPermissionSet->permission_set_id)->toBe($set->id);
+});
+
+it('creates a user without a permission set when none is provided', function () {
+    Notification::fake();
+
+    actingAs($this->admin)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'role' => 'user',
+    ])->assertRedirect();
+
+    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
+    expect(UserPermissionSet::where('user_id', $newUser->id)->exists())->toBeFalse();
 });
 
 it('rejects creation with a duplicate email', function () {

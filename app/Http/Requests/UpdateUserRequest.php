@@ -24,6 +24,7 @@ class UpdateUserRequest extends FormRequest
         return [
             ...$this->profileRules($userId),
             'role' => ['required', 'string', Rule::in($allowedRoles)],
+            'permission_set_id' => ['nullable', 'integer', 'exists:permission_sets,id'],
         ];
     }
 }

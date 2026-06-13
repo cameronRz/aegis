@@ -23,6 +23,7 @@ class StoreUserRequest extends FormRequest
         return [
             ...$this->profileRules(),
             'role' => ['required', 'string', Rule::in($allowedRoles)],
+            'permission_set_id' => ['nullable', 'integer', 'exists:permission_sets,id'],
         ];
     }
 }

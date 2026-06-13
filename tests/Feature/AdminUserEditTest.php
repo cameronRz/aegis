@@ -4,6 +4,7 @@ use App\Enum\Role;
 use App\Models\Permission;
 use App\Models\PermissionSet;
 use App\Models\User;
+use App\Models\UserPermissionSet;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -164,6 +165,71 @@ it('rejects an update with a duplicate email', function () {
         'email' => 'taken@example.com',
         'role' => 'user',
     ])->assertSessionHasErrors('email');
+});
+
+// --- Permission set assignment ---
+
+it('passes permission sets and current set id to the edit page', function () {
+    $set = PermissionSet::factory()->create();
+    $this->target->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+
+    actingAs($this->admin)
+        ->get("/admin/users/{$this->target->id}/edit")
+        ->assertInertia(fn ($page) => $page
+            ->has('permissionSets', 1)
+            ->where('currentPermissionSetId', $set->id)
+        );
+});
+
+it('passes null currentPermissionSetId when user has no set', function () {
+    actingAs($this->admin)
+        ->get("/admin/users/{$this->target->id}/edit")
+        ->assertInertia(fn ($page) => $page->where('currentPermissionSetId', null));
+});
+
+it('assigns a permission set on update', function () {
+    $set = PermissionSet::factory()->create();
+
+    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
+        'first_name' => $this->target->first_name,
+        'last_name' => $this->target->last_name,
+        'email' => $this->target->email,
+        'role' => 'user',
+        'permission_set_id' => $set->id,
+    ])->assertRedirect();
+
+    expect($this->target->fresh()->userPermissionSet?->permission_set_id)->toBe($set->id);
+});
+
+it('clears the permission set when null is sent on update', function () {
+    $set = PermissionSet::factory()->create();
+    $this->target->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+
+    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
+        'first_name' => $this->target->first_name,
+        'last_name' => $this->target->last_name,
+        'email' => $this->target->email,
+        'role' => 'user',
+        'permission_set_id' => null,
+    ])->assertRedirect();
+
+    expect(UserPermissionSet::where('user_id', $this->target->id)->exists())->toBeFalse();
+});
+
+it('changes the permission set on update', function () {
+    $setA = PermissionSet::factory()->create();
+    $setB = PermissionSet::factory()->create();
+    $this->target->userPermissionSet()->create(['permission_set_id' => $setA->id, 'assigned_by' => null]);
+
+    actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
+        'first_name' => $this->target->first_name,
+        'last_name' => $this->target->last_name,
+        'email' => $this->target->email,
+        'role' => 'user',
+        'permission_set_id' => $setB->id,
+    ])->assertRedirect();
+
+    expect($this->target->fresh()->userPermissionSet?->permission_set_id)->toBe($setB->id);
 });
 
 it('allows the same email to be submitted unchanged', function () {

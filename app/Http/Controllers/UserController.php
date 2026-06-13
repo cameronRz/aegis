@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enum\Role;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\PermissionSet;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\RedirectResponse;
@@ -74,13 +75,12 @@ class UserController extends Controller
 
         return Inertia::render('users/create', [
             'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
+            'permissionSets' => PermissionSet::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $viewer = $request->user();
-
         $user = User::create([
             'first_name' => $request->validated('first_name'),
             'last_name' => $request->validated('last_name'),
@@ -103,6 +103,13 @@ class UserController extends Controller
 
         $user->save();
 
+        if ($request->filled('permission_set_id')) {
+            $user->userPermissionSet()->create([
+                'permission_set_id' => $request->validated('permission_set_id'),
+                'assigned_by' => $request->user()->id,
+            ]);
+        }
+
         Password::broker()->sendResetLink(['email' => $user->email]);
 
         return redirect()->route('admin.users.show', $user);
@@ -113,10 +120,13 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         $viewer = $request->user();
+        $user->loadMissing('userPermissionSet');
 
         return Inertia::render('users/edit', [
             'user' => $user,
             'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
+            'permissionSets' => PermissionSet::orderBy('name')->get(['id', 'name']),
+            'currentPermissionSetId' => $user->userPermissionSet?->permission_set_id,
         ]);
     }
 
@@ -129,6 +139,15 @@ class UserController extends Controller
         $user->email = $request->validated('email');
         $user->role = Role::from($request->validated('role'));
         $user->save();
+
+        $user->userPermissionSet()->delete();
+
+        if ($request->filled('permission_set_id')) {
+            $user->userPermissionSet()->create([
+                'permission_set_id' => $request->validated('permission_set_id'),
+                'assigned_by' => $request->user()->id,
+            ]);
+        }
 
         return redirect()->route('admin.users.show', $user);
     }
