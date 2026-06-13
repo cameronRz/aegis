@@ -1,4 +1,4 @@
-export type Role = 'site_admin' | 'admin' | 'manager' | 'user';
+export type Role = 'site_admin' | 'admin' | 'user';
 
 export const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];
 
@@ -7,6 +7,16 @@ export type Permission = {
     name: string;
     display_name: string;
     description: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type PermissionSet = {
+    id: number;
+    name: string;
+    description: string | null;
+    permissions?: Permission[];
+    user_permission_sets_count?: number;
     created_at: string;
     updated_at: string;
 };
@@ -21,7 +31,6 @@ export type User = {
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
-    permissions?: Permission[];
     deleted_at: string | null;
     created_at: string;
     updated_at: string;
