@@ -66,8 +66,16 @@ Detailed domain knowledge is in project skills — activate them when working in
 
 ## Active Planning
 
-- **`.claude/planning/cart-checkout-plan.md`** — Cart, checkout, and subscription implementation (Phases 1–6). Check the "Currently on" line at the top to find current position. Run the Phase Exit Checklist before moving between phases.
-- **`.claude/planning/phase-one-polishing.md`** — Completed refactoring reference. Describes shared components and abstractions introduced during the polishing pass.
+See **`.claude/planning/PLANS.md`** for the full index, current focus, and sequence. Each plan file has a 4-line header (Status / Current step / Depends on / Summary) for fast orientation.
+
+| File | Summary |
+|---|---|
+| `PLANS.md` | Master index — start here each session |
+| `TEMPLATE.md` | Copy this when starting a new plan |
+| `01-cleanup.md` | Architectural fixes before Phase 5 (current) |
+| `02-permission-sets.md` | Permission sets feature — replaces manager role |
+| `03-cart-checkout.md` | Cart/checkout/webhooks/orders/subscriptions (Phases 5–7) |
+| `completed/` | Finished plans kept for reference |
 
 ---
 

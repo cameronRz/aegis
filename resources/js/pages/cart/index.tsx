@@ -8,6 +8,7 @@ import {
 import { store as storeCheckout } from '@/actions/App/Http/Controllers/CheckoutController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ProductTypeBadge } from '@/components/product-type-badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { formatCents } from '@/lib/money';
 import { cart as cartRoute, shop as shopRoute } from '@/routes';
@@ -19,11 +20,12 @@ type CartPageCart = Omit<Cart, 'items'> & { items: CartPageItem[] };
 
 type Props = {
     cart: CartPageCart;
+    unavailableItems: CartItem[];
     total: number;
     errors?: { cart?: string; checkout?: string };
 };
 
-export default function CartIndex({ cart, total, errors }: Props) {
+export default function CartIndex({ cart, unavailableItems, total, errors }: Props) {
     const [clearOpen, setClearOpen] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [checkingOut, setCheckingOut] = useState(false);
@@ -51,7 +53,7 @@ export default function CartIndex({ cart, total, errors }: Props) {
         });
     }
 
-    if (cart.items.length === 0) {
+    if (cart.items.length === 0 && unavailableItems.length === 0) {
         return (
             <>
                 <Head title="Cart" />
@@ -73,6 +75,34 @@ export default function CartIndex({ cart, total, errors }: Props) {
                 <div className="flex flex-1 flex-col gap-3">
                     {errors?.cart && (
                         <p className="text-sm text-destructive">{errors.cart}</p>
+                    )}
+
+                    {unavailableItems.length > 0 && (
+                        <>
+                            <Alert variant="destructive">
+                                <AlertDescription>
+                                    Some items in your cart are no longer available.
+                                </AlertDescription>
+                            </Alert>
+
+                            {unavailableItems.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center gap-4 rounded-lg border border-dashed p-4 text-muted-foreground"
+                                >
+                                    <div className="flex flex-1 flex-col gap-1">
+                                        <span className="font-medium">Item no longer available</span>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleRemove(item)}
+                                        className="text-sm transition-colors hover:text-destructive"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </>
                     )}
 
                     {cart.items.map((item) => {
@@ -154,27 +184,29 @@ export default function CartIndex({ cart, total, errors }: Props) {
                 </div>
 
                 {/* Order summary */}
-                <div className="w-full rounded-lg border p-6 lg:w-72">
-                    <h2 className="mb-4 font-semibold">Order Summary</h2>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-medium tabular-nums">{formatCents(total)}</span>
+                {cart.items.length > 0 && (
+                    <div className="w-full rounded-lg border p-6 lg:w-72">
+                        <h2 className="mb-4 font-semibold">Order Summary</h2>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span className="font-medium tabular-nums">{formatCents(total)}</span>
+                        </div>
+                        <div className="mt-4">
+                            <Button
+                                className="w-full"
+                                disabled={checkingOut}
+                                onClick={handleCheckout}
+                            >
+                                {checkingOut ? 'Redirecting…' : 'Proceed to Checkout'}
+                            </Button>
+                            {errors?.checkout && (
+                                <p className="mt-2 text-center text-xs text-destructive">
+                                    {errors.checkout}
+                                </p>
+                            )}
+                        </div>
                     </div>
-                    <div className="mt-4">
-                        <Button
-                            className="w-full"
-                            disabled={checkingOut}
-                            onClick={handleCheckout}
-                        >
-                            {checkingOut ? 'Redirecting…' : 'Proceed to Checkout'}
-                        </Button>
-                        {errors?.checkout && (
-                            <p className="mt-2 text-center text-xs text-destructive">
-                                {errors.checkout}
-                            </p>
-                        )}
-                    </div>
-                </div>
+                )}
             </div>
 
             <ConfirmDialog

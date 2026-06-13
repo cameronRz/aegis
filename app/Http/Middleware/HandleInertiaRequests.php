@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                         ->mapWithKeys(fn (Permission $permission) => [
                             $permission->name => Gate::allows($permission->name),
                         ])
+                        ->put('admin', Gate::allows('admin'))
                         ->all()
                     : [],
             ],

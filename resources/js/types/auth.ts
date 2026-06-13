@@ -22,12 +22,14 @@ export type User = {
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     permissions?: Permission[];
+    deleted_at: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
 };
 
 export type Can = {
+    admin: boolean;
     view_users: boolean;
     create_user: boolean;
     edit_user: boolean;
@@ -90,7 +92,7 @@ export type Auth = {
 export type CartItem = {
     id: number;
     cart_id: number;
-    product_id: number;
+    product_id: number | null;
     quantity: number;
     product?: Product | null;
     created_at: string;

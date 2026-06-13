@@ -18,6 +18,7 @@ beforeEach(function () {
     $this->mock(StripeService::class, function (MockInterface $mock) {
         $mock->allows('createProduct')->andReturn(StripeProduct::constructFrom(['id' => 'prod_test123']));
         $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
+        $mock->allows('archiveProduct');
     });
 
     $this->user = User::factory()->create();
@@ -102,4 +103,32 @@ it('clears all cart items', function () {
         ->assertRedirect();
 
     expect($cart->items()->count())->toBe(0);
+});
+
+it('nulls out the product on a cart item when the product is force-deleted', function () {
+    $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+    $product = Product::factory()->create();
+    $item = CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $product->id]);
+
+    $product->forceDelete();
+
+    expect($item->fresh())
+        ->product_id->toBeNull()
+        ->exists->toBeTrue();
+});
+
+it('returns unavailable items separately from the cart page', function () {
+    $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+    $available = Product::factory()->create();
+    CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $available->id]);
+    $unavailable = CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => null]);
+
+    actingAs($this->user)
+        ->get(route('cart'))
+        ->assertInertia(fn ($page) => $page
+            ->component('cart/index')
+            ->has('cart.items', 1)
+            ->has('unavailableItems', 1)
+            ->where('unavailableItems.0.id', $unavailable->id)
+        );
 });

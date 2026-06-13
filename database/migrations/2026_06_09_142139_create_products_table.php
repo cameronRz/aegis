@@ -1,8 +1,5 @@
 <?php
 
-use App\Enum\BillingInterval;
-use App\Enum\PriceType;
-use App\Enum\ProductType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,13 +12,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
             $table->string('name');
-            $table->enum('type', array_column(ProductType::cases(), 'value'));
+            $table->string('type');
             $table->string('sku')->unique();
             $table->boolean('is_active')->default(true);
             $table->string('description');
             $table->unsignedInteger('price');
-            $table->enum('price_type', array_column(PriceType::cases(), 'value'));
-            $table->enum('billing_interval', array_column(BillingInterval::cases(), 'value'))->nullable();
+            $table->string('price_type');
+            $table->string('billing_interval')->nullable();
             $table->unsignedSmallInteger('billing_interval_count')->nullable();
             $table->unsignedSmallInteger('trial_period_days')->nullable();
             $table->unsignedInteger('stock_quantity')->nullable();

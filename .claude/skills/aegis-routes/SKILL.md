@@ -30,6 +30,9 @@ DELETE /cart                    → cart.clear                           (auth +
 GET   /admin/users                                         → admin.users                          (can:view_users)
 GET   /admin/users/create                                  → admin.users.create                   (can:create_user)
 POST  /admin/users                                         → admin.users.store                    (can:create_user)
+GET    /admin/users/trash                                   → admin.users.trash                    (can:admin)
+DELETE /admin/users/{user}/force                            → admin.users.force-destroy            (can:admin, withTrashed)
+POST   /admin/users/{user}/restore                          → admin.users.restore                  (can:delete_user, withTrashed)
 GET    /admin/users/{user}/edit                             → admin.users.edit                     (can:edit_user)
 PATCH  /admin/users/{user}                                 → admin.users.update                   (can:edit_user)
 DELETE /admin/users/{user}                                 → admin.users.destroy                  (can:delete_user)
@@ -56,7 +59,7 @@ GET   /admin/products/{product}                            → admin.products.sh
 
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 
-**Route ordering note:** `users/create` is declared before `users/{user}` to prevent route model binding from treating the literal "create" segment as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories and products: `products/create` and `products/trash` are declared before `products/{product}`, and `products/{product}/edit` before `products/{product}` (show). Always declare literal-segment routes before parametric routes at the same depth.
+**Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories and products: `products/create` and `products/trash` are declared before `products/{product}`, and `products/{product}/edit` before `products/{product}` (show). Always declare literal-segment routes before parametric routes at the same depth.
 ```
 
 ## `routes/settings.php`

@@ -19,18 +19,18 @@ class CartController extends Controller
     {
         $cart = $this->cart->getOrCreate($request->user());
 
-        $cart->load('items.product');
+        $cart->loadMissing('items.product');
 
-        // Strip items whose product was soft-deleted after being added to the cart.
-        // Force-deleted products cascade and remove the cart item, but soft-deleted
-        // ones leave the item with an unresolvable product relationship (null).
-        $cart->setRelation(
-            'items',
-            $cart->items->filter(fn ($item) => $item->product !== null)->values()
-        );
+        $allItems = $cart->items;
+
+        $availableItems = $allItems->filter(fn ($item) => $item->product !== null)->values();
+        $unavailableItems = $allItems->filter(fn ($item) => $item->product === null)->values();
+
+        $cart->setRelation('items', $availableItems);
 
         return Inertia::render('cart/index', [
             'cart' => $cart,
+            'unavailableItems' => $unavailableItems,
             'total' => $this->cart->total($cart),
         ]);
     }

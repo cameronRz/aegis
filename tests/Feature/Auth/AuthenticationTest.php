@@ -63,6 +63,19 @@ test('users can logout', function () {
     $this->assertGuest();
 });
 
+test('soft-deleted users can not authenticate', function () {
+    $user = User::factory()->create();
+    $user->delete();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors();
+});
+
 test('users are rate limited', function () {
     $user = User::factory()->create();
 

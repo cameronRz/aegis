@@ -1,0 +1,166 @@
+import { Head, router } from '@inertiajs/react';
+import {
+    createColumnHelper,
+    getCoreRowModel,
+    useReactTable,
+} from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
+import {
+    forceDestroy as forceDestroyUser,
+    restore as restoreUser,
+} from '@/actions/App/Http/Controllers/UserController';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { DataTable } from '@/components/data-table';
+import { DataTablePagination } from '@/components/data-table-pagination';
+import { RoleBadge } from '@/components/role-badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
+import { users as adminUsersRoute } from '@/routes/admin';
+import { trash as usersTrashRoute } from '@/routes/admin/users';
+import type { PaginatedData, Role, User } from '@/types';
+
+type Props = {
+    users: PaginatedData<User>;
+    filters: { search?: string };
+};
+
+function formatDeletedAt(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+}
+
+const columnHelper = createColumnHelper<User>();
+
+export default function UsersTrash({ users, filters }: Props) {
+    const [search, setSearch] = useDebouncedSearch(
+        filters.search,
+        usersTrashRoute.url(),
+    );
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const columns = useMemo(
+        () => [
+            columnHelper.accessor('first_name', { header: 'First Name' }),
+            columnHelper.accessor('last_name', { header: 'Last Name' }),
+            columnHelper.accessor('email', { header: 'Email' }),
+            columnHelper.accessor('role', {
+                header: 'Role',
+                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            }),
+            columnHelper.display({
+                id: 'deleted_at',
+                header: 'Deleted',
+                cell: ({ row }) =>
+                    row.original.deleted_at
+                        ? formatDeletedAt(row.original.deleted_at)
+                        : '—',
+            }),
+            columnHelper.display({
+                id: 'actions',
+                header: '',
+                cell: ({ row }) => (
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                router.post(
+                                    restoreUser(row.original).url,
+                                    {},
+                                    {
+                                        preserveScroll: true,
+                                    },
+                                );
+                            }}
+                        >
+                            Restore
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setUserToDelete(row.original);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                ),
+            }),
+        ],
+        [],
+    );
+
+    // eslint-disable-next-line react-hooks/incompatible-library
+    const table = useReactTable({
+        data: users.data,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+    function handleForceDelete() {
+        if (!userToDelete) return;
+
+        setDeleting(true);
+
+        router.delete(forceDestroyUser(userToDelete).url, {
+            onSuccess: () => {
+                setUserToDelete(null);
+                setDeleting(false);
+            },
+            onError: () => setDeleting(false),
+        });
+    }
+
+    return (
+        <>
+            <Head title="User Trash" />
+            <div className="flex h-full flex-1 flex-col gap-4 p-4">
+                <div className="flex items-center gap-4">
+                    <Input
+                        placeholder="Search by name or email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="max-w-sm"
+                    />
+                </div>
+
+                <DataTable table={table} emptyMessage="No deleted users." />
+
+                <DataTablePagination paginatedData={users} />
+            </div>
+
+            <ConfirmDialog
+                open={userToDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) setUserToDelete(null);
+                }}
+                title="Permanently Delete User"
+                alertTitle="This cannot be undone."
+                description={
+                    <>
+                        <strong>{userToDelete?.full_name}</strong> will be
+                        permanently deleted and cannot be recovered.
+                    </>
+                }
+                confirmLabel="Delete permanently"
+                processing={deleting}
+                onConfirm={handleForceDelete}
+            />
+        </>
+    );
+}
+
+UsersTrash.layout = {
+    breadcrumbs: [
+        { title: 'Users', href: adminUsersRoute.url() },
+        { title: 'Trash' },
+    ],
+};

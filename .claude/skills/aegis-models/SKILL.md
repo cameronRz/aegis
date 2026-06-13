@@ -26,12 +26,13 @@ The central model. Represents both admin-side staff and (eventually) client-side
 | `two_factor_confirmed_at` | timestamp\|null | |
 | `remember_token` | string\|null | |
 | `stripe_customer_id` | string\|null | unique; set on registration and admin user creation |
+| `deleted_at` | timestamp\|null | soft deletes |
 
 **Appended attributes:**
 - `full_name` — computed: `"{first_name} {last_name}"`
 
 **Relationships:**
-- `permissions()` → `BelongsToMany(Permission)` via `user_permissions` pivot; pivot has `granted_by` (user_id FK) and timestamps
+- `permissions()` → `BelongsToMany(Permission)` via `user_permissions` pivot; pivot has `granted_by` (user_id FK, nullable, `nullOnDelete`) and timestamps
 - Passkeys → managed by Fortify via `passkeys` table (user_id FK, cascade delete)
 
 **Key methods:**
@@ -41,7 +42,11 @@ The central model. Represents both admin-side staff and (eventually) client-side
 
 **Fillable:** `first_name`, `last_name`, `email`, `password`, `stripe_customer_id` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
-**Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `TwoFactorAuthenticatable`
+**Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `SoftDeletes`, `TwoFactorAuthenticatable`
+
+**Soft delete cleanup (`booted()`):** on `deleting()`, if not force-deleting, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). `user_permissions` rows are kept intentionally so permissions are restored if the user is restored. The `role` column is a plain `string` cast to `Role` (not a Postgres enum).
+
+**Auth + soft delete:** the `SoftDeletes` global scope (`whereNull('deleted_at')`) means `User::find($id)` returns `null` for soft-deleted users, so Laravel's session-based re-auth treats them as logged out and login attempts fail validation. Use `User::onlyTrashed()` / `withTrashed()` for trash/restore/force-delete flows.
 
 ---
 
@@ -421,6 +426,18 @@ Form requests:
 Soft-delete keeps the image on disk because the record may be restored. Force delete cleans up the image since the record is gone permanently.
 
 `restore` and `forceDestroy` routes use `->withTrashed()` so route model binding finds soft-deleted records. Without it, the binding 404s on trashed products.
+
+### User delete / trash / restore
+
+Same pattern as products, minus image handling:
+
+| Action | Method | Redirect |
+|---|---|---|
+| Soft-delete (index page) | `destroy()` — `$user->delete()` | `admin.users` |
+| Restore (trash page) | `restore()` — `$user->restore()` | `admin.users.trash` |
+| Force delete (trash page) | `forceDestroy()` — `$user->forceDelete()` | `admin.users.trash` |
+
+`UserController::trash()` (`can:admin`) lists `User::onlyTrashed()`, scoped by the same role-visibility rules as the active index (site_admin sees everyone, admin/manager can't see site_admins, manager can't see admins), with `ilike` search on first/last name and email. `restore` is gated `can:delete_user`; `trash` and `forceDestroy` are gated `can:admin`. Both `restore` and `force` routes use `->withTrashed()`.
 
 ### Sort order on product update
 The `Sortable` trait only fires on `creating`. On update, `ProductController::update()` handles sort order manually: if `category_id` changed, it sets `sort_order = max(sort_order) + 1` within the new category (using `Product::where('category_id', $newId)->max('sort_order') + 1`, which handles `null` correctly via Laravel's query builder). If category is unchanged, sort_order is not modified.
