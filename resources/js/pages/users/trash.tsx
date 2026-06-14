@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { users as adminUsersRoute } from '@/routes/admin';
 import { trash as usersTrashRoute } from '@/routes/admin/users';
-import type { PaginatedData, Role, User } from '@/types';
+import type { PaginatedData, Tier, User } from '@/types';
 
 type Props = {
     users: PaginatedData<User>;
@@ -48,9 +48,9 @@ export default function UsersTrash({ users, filters }: Props) {
             columnHelper.accessor('first_name', { header: 'First Name' }),
             columnHelper.accessor('last_name', { header: 'Last Name' }),
             columnHelper.accessor('email', { header: 'Email' }),
-            columnHelper.accessor('role', {
-                header: 'Role',
-                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            columnHelper.accessor('tier', {
+                header: 'Tier',
+                cell: ({ getValue }) => <RoleBadge role={getValue() as Tier} />,
             }),
             columnHelper.display({
                 id: 'deleted_at',

@@ -26,7 +26,7 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
         });
     }
 
-    const permissionSet = user.permission_set;
+    const assignedRoles = user.roles ?? [];
 
     return (
         <>
@@ -40,7 +40,7 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
                                 <CardDescription>{user.email}</CardDescription>
                             </div>
                             <div className="flex items-center gap-3">
-                                <RoleBadge role={user.role} />
+                                <RoleBadge role={user.tier} />
                                 {canEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={editUser(user).url}>Edit</Link>
@@ -63,22 +63,24 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Permission Set</CardTitle>
+                        <CardTitle>Roles</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {permissionSet ? (
-                            <div className="flex flex-col gap-1">
-                                <span className="font-medium">{permissionSet.name}</span>
-                                {permissionSet.permissions?.length ? (
-                                    <span className="text-muted-foreground text-sm">
-                                        {permissionSet.permissions
-                                            .map((p) => p.display_name)
-                                            .join(', ')}
-                                    </span>
-                                ) : null}
+                        {assignedRoles.length > 0 ? (
+                            <div className="flex flex-col gap-3">
+                                {assignedRoles.map((r) => (
+                                    <div key={r.id} className="flex flex-col gap-1">
+                                        <span className="font-medium">{r.name}</span>
+                                        {r.permissions?.length ? (
+                                            <span className="text-muted-foreground text-sm">
+                                                {r.permissions.map((p) => p.display_name).join(', ')}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                ))}
                             </div>
                         ) : (
-                            <p className="text-muted-foreground text-sm">No permission set assigned.</p>
+                            <p className="text-muted-foreground text-sm">No roles assigned.</p>
                         )}
                     </CardContent>
                 </Card>

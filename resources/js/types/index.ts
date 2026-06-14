@@ -1,5 +1,5 @@
 export type * from './auth';
-export { PRIVILEGED_ROLES } from './auth';
+export { PRIVILEGED_TIERS } from './auth';
 export type * from './navigation';
 export type * from './ui';
 

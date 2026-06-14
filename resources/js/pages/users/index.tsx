@@ -14,8 +14,8 @@ import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { users as adminUsersRoute } from '@/routes/admin';
 import { trash as usersTrashRoute } from '@/routes/admin/users';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Auth, PaginatedData, Role, User } from '@/types';
+import { PRIVILEGED_TIERS } from '@/types';
+import type { Auth, PaginatedData, Tier, User } from '@/types';
 
 function goToUser(user: User) {
     router.visit(showUser(user).url);
@@ -37,16 +37,16 @@ export default function UsersIndex({ users, filters }: Props) {
     const canEditRow = (target: User) =>
         auth.can.edit_user &&
         auth.user.id !== target.id &&
-        (auth.user.role === 'site_admin' || !PRIVILEGED_ROLES.includes(target.role as Role));
+        (auth.user.tier === 'site_admin' || !PRIVILEGED_TIERS.includes(target.tier as Tier));
 
     const columns = useMemo(
         () => [
             columnHelper.accessor('first_name', { header: 'First Name' }),
             columnHelper.accessor('last_name', { header: 'Last Name' }),
             columnHelper.accessor('email', { header: 'Email' }),
-            columnHelper.accessor('role', {
-                header: 'Role',
-                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            columnHelper.accessor('tier', {
+                header: 'Tier',
+                cell: ({ getValue }) => <RoleBadge role={getValue() as Tier} />,
             }),
             ...(auth.can.edit_user
                 ? [
@@ -71,7 +71,7 @@ export default function UsersIndex({ users, filters }: Props) {
                 : []),
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [auth.can.edit_user, auth.user.id, auth.user.role],
+        [auth.can.edit_user, auth.user.id, auth.user.tier],
     );
 
     // eslint-disable-next-line react-hooks/incompatible-library

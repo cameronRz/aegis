@@ -1,6 +1,6 @@
 ---
 name: aegis-models
-description: "Activate when working with Aegis domain models, database schema, or the role/permission system. Triggers: User model, Permission model, PermissionSet model, Category model, Role enum, PermissionName enum, Sortable trait, gates, `user_permission_sets` / `permission_set_permissions` pivots, `hasPermission`, database migrations or table structure, form requests, or validation rules. Do NOT activate for frontend-only changes or route definitions."
+description: "Activate when working with Aegis domain models, database schema, or the role/permission system. Triggers: User model, Permission model, Role model (RBAC), Category model, Tier enum, PermissionName enum, Sortable trait, gates, `role_user` / `role_permissions` pivots, `hasPermission`, database migrations or table structure, form requests, or validation rules. Do NOT activate for frontend-only changes or route definitions."
 license: MIT
 metadata:
   author: Cameron
@@ -19,7 +19,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 | `last_name` | string | |
 | `email` | string | unique |
 | `password` | hashed string | |
-| `role` | `Role` enum | default: `user` |
+| `role` | `Tier` enum | default: `user`; coarse access tier, not RBAC |
 | `email_verified_at` | datetime\|null | |
 | `two_factor_secret` | text\|null | Fortify managed |
 | `two_factor_recovery_codes` | text\|null | Fortify managed |
@@ -32,20 +32,19 @@ The central model. Represents both admin-side staff and (eventually) client-side
 - `full_name` — computed: `"{first_name} {last_name}"`
 
 **Relationships:**
-- `userPermissionSet()` → `HasOne(UserPermissionSet)` — the user's single permission set assignment (if any)
-- `permissionSet()` → `HasOneThrough(PermissionSet, UserPermissionSet)` — the assigned `PermissionSet` itself, traversed through the pivot model
+- `roles()` → `BelongsToMany(Role, 'role_user')->withPivot('assigned_by')->withTimestamps()` — the user's RBAC roles (many-to-many); use `syncWithPivotValues()` to update
 - Passkeys → managed by Fortify via `passkeys` table (user_id FK, cascade delete)
 
 **Key methods:**
-- `isAdmin(): bool` — returns `true` for `site_admin` and `admin` roles; use this instead of inline `in_array($role, [...])` checks
-- `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then loads `permissionSet` and checks `$set->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value)`. No assigned set → `false`.
-- `assignableRoles(): Role[]` — returns the Role cases this user is allowed to assign to others. `site_admin` gets all roles (`Role::cases()`); everyone else gets `[Role::User]`. Used by `UserController`, `StoreUserRequest`, and `UpdateUserRequest` — call `array_column($user->assignableRoles(), 'value')` to get string values for validation/view props.
+- `isAdmin(): bool` — returns `true` for `site_admin` and `admin` tiers; use this instead of inline `in_array($role, [...])` checks
+- `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then loads `roles.permissions` and checks if any role's permissions contain the slug: `$this->loadMissing('roles.permissions')->roles->flatMap->permissions->pluck('name')->contains($permission->value)`. No roles assigned → `false`.
+- `assignableTiers(): Tier[]` — returns the Tier cases this user is allowed to assign to others. `site_admin` gets all tiers (`Tier::cases()`); everyone else gets `[Tier::User]`. Used by `UserController`, `StoreUserRequest`, and `UpdateUserRequest` — call `array_column($user->assignableTiers(), 'value')` to get string values for validation/view props.
 
 **Fillable:** `first_name`, `last_name`, `email`, `password`, `stripe_customer_id` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `SoftDeletes`, `TwoFactorAuthenticatable`
 
-**Soft delete cleanup (`booted()`):** on `deleting()`, if not force-deleting, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). The `user_permission_sets` row (if any) is kept intentionally so the assignment is restored if the user is restored. The `role` column is a plain `string` cast to `Role` (not a Postgres enum).
+**Soft delete cleanup (`booted()`):** on `deleting()`, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). The `role_user` pivot rows cascade-delete automatically. The `role` column is a plain `string` cast to `Tier` (not a Postgres enum).
 
 **Auth + soft delete:** the `SoftDeletes` global scope (`whereNull('deleted_at')`) means `User::find($id)` returns `null` for soft-deleted users, so Laravel's session-based re-auth treats them as logged out and login attempts fail validation. Use `User::onlyTrashed()` / `withTrashed()` for trash/restore/force-delete flows.
 
@@ -156,7 +155,7 @@ Reusable trait for models that need auto-assigned `sort_order`. Apply to any mod
 
 ## Permission Model
 
-Named, reusable permissions that can be granted to users via permission sets. Think of these as feature flags grouped into sets by admins.
+Named, reusable permissions. Grouped into RBAC roles by admins.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -165,13 +164,13 @@ Named, reusable permissions that can be granted to users via permission sets. Th
 | `display_name` | string | human-readable label |
 | `description` | string\|null | |
 
-`PermissionSet::permissions()` is the relationship used to query/sync; `Permission` itself does not define the inverse `belongsToMany`.
+`Role::permissions()` is the relationship used to query/sync; `Permission` itself has no inverse `belongsToMany`.
 
 ---
 
-## `PermissionSet` Model (`app/Models/PermissionSet.php`)
+## `Role` Model (`app/Models/Role.php`) — RBAC
 
-A named, admin-managed bundle of permissions. Replaces individual per-user permission grants.
+A named, admin-managed bundle of permissions (classic RBAC role). Users can hold multiple roles.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -181,52 +180,32 @@ A named, admin-managed bundle of permissions. Replaces individual per-user permi
 
 **Fillable:** `name`, `description`
 
+**Factory:** `RoleFactory`
+
 **Relationships:**
-- `permissions()` → `BelongsToMany(Permission)` via `permission_set_permissions` (pure pivot, no `id`/timestamps)
-- `userPermissionSets()` → `HasMany(UserPermissionSet)`
+- `permissions()` → `BelongsToMany(Permission)` via `role_permissions` (pure pivot, composite PK on `(role_id, permission_id)`, no timestamps)
+- `users()` → `BelongsToMany(User)` via `role_user`
 
 **Key methods:**
-- `isAssigned(): bool` — `true` if any user has this set assigned (via `userPermissionSets()->exists()`). `PermissionSetController::destroy()` checks this before deleting and returns a friendly error if assigned (the DB also enforces this via `restrictOnDelete`).
+- `isAssigned(): bool` — `true` if any user has this role (`DB::table('role_user')->where('role_id', $id)->exists()`). `RoleController::destroy()` checks this and returns a user-facing error (the DB also enforces via `restrictOnDelete`).
 
 ---
 
-## `UserPermissionSet` Model (`app/Models/UserPermissionSet.php`)
+## Tier & Permission System
 
-Pivot-with-identity linking a `User` to their single `PermissionSet`.
-
-| Field | Type | Notes |
-|---|---|---|
-| `id` | int | |
-| `user_id` | int | FK → users, cascadeOnDelete, **unique** (one set per user) |
-| `permission_set_id` | int | FK → permission_sets, restrictOnDelete |
-| `assigned_by` | int\|null | FK → users, nullOnDelete |
-
-**Fillable:** `user_id`, `permission_set_id`, `assigned_by`
-
-**Relationships:**
-- `user()` → `BelongsTo(User)`
-- `permissionSet()` → `BelongsTo(PermissionSet)`
-- `assignedBy()` → `BelongsTo(User, 'assigned_by')`
-
-`restrictOnDelete` on `permission_set_id` means deleting a `PermissionSet` with assigned users throws a FK violation — `PermissionSetController::destroy()` guards against this with `isAssigned()` first.
-
----
-
-## Role & Permission System
-
-### Roles (`App\Enum\Role`)
+### Tiers (`App\Enum\Tier`) — coarse access levels
 
 ```
 site_admin > admin > user
 ```
 
-| Role | Access |
+| Tier | Access |
 |---|---|
 | `site_admin` | Full access to everything, bypasses all permission checks |
-| `admin` | Can perform actions explicitly enabled for admins by site_admin (coded permissions) |
-| `user` | Base-level access; gains additional permissions only via an assigned `PermissionSet` |
+| `admin` | Can perform actions explicitly enabled for admins; cannot be edited by regular admins |
+| `user` | Base-level access; gains additional permissions only via assigned RBAC roles |
 
-The `manager` role was removed (permission-sets migration); existing `manager` users were migrated to `user`.
+The `manager` tier was removed in an earlier migration; existing `manager` users were migrated to `user`.
 
 ### `PermissionName` enum (`App\Enum\PermissionName`)
 
@@ -268,9 +247,9 @@ Auto-discovered by Laravel for the `User` model. No `before()` method — each m
 
 ### How permissions work in practice
 - Permissions are defined as `PermissionName` enum cases; their `->value` is the slug stored in the `permissions` table `name` column
-- Permissions are grouped into `PermissionSet`s (admin/site_admin managed); each user has at most one set via `user_permission_sets` (one-to-one, enforced by `unique` on `user_id`)
-- `User::hasPermission(PermissionName $permission)` checks `$permission->value` against the user's assigned set's permissions; admins bypass via `isAdmin()`; no set assigned → `false`
-- Adding a new permission: add a `PermissionName` case → add a `PermissionSeeder` row → gate auto-registers (no `AppServiceProvider` edit needed) → add it to relevant `PermissionSet`s via the admin UI
+- Permissions are grouped into RBAC `Role`s (admin/site_admin managed); users can hold **multiple** roles via `role_user` pivot
+- `User::hasPermission(PermissionName $permission)` loads all assigned roles with their permissions and checks if any contain the slug; admins bypass via `isAdmin()`; no roles assigned → `false`
+- Adding a new permission: add a `PermissionName` case → add a `PermissionSeeder` row → gate auto-registers (no `AppServiceProvider` edit needed) → add it to relevant `Role`s via the admin UI
 
 ### Two-layer authorization pattern
 
@@ -402,9 +381,9 @@ Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver
 |---|---|
 | `users` | All user accounts (staff and future clients); includes `stripe_customer_id`, `deleted_at` (soft deletes) |
 | `permissions` | Named permission definitions |
-| `permission_sets` | Named, admin-managed bundles of permissions |
-| `permission_set_permissions` | Pure pivot: which permissions belong to which set (composite PK, no `id`/timestamps) |
-| `user_permission_sets` | One-to-one: each user's assigned permission set, plus `assigned_by` (nullable, nullOnDelete) |
+| `roles` | Named, admin-managed RBAC roles (bundles of permissions) |
+| `role_permissions` | Pure pivot: which permissions belong to which role (composite PK `(role_id, permission_id)`, no timestamps) |
+| `role_user` | Many-to-many: user→role assignments with `assigned_by` (nullable, nullOnDelete) and timestamps; composite PK `(user_id, role_id)` |
 | `categories` | Product category tree (self-referential via `parent_id`) |
 | `products` | Products available for purchase (physical, digital, subscription); includes `stripe_product_id`, `stripe_price_id` |
 | `carts` | One cart per user (`user_id` nullable, nullOnDelete) |
@@ -443,10 +422,10 @@ Shared validation traits (in `app/Http/Requests/Concerns/`):
 - `ProfileValidationRules` — `profileRules(?int $userId)` for first/last name and unique email
 
 Form requests:
-- `StoreUserRequest` — validates new user creation; uses `profileRules()` + role + `permission_set_id` (`['nullable', 'integer', 'exists:permission_sets,id']`)
-- `UpdateUserRequest` — validates user edits; same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so the email uniqueness check ignores the current user
-- `StorePermissionSetRequest` — validates `name` (required, unique), `description` (nullable, max 1000), `permissions` (nullable array of permission IDs, `exists:permissions,id`)
-- `UpdatePermissionSetRequest` — same as `StorePermissionSetRequest` but `name` uniqueness ignores the current set via `->ignore($this->route('permissionSet'))`
+- `StoreUserRequest` — validates new user creation; uses `profileRules()` + `role` (validated against `assignableTiers()`) + `role_ids` (`['nullable', 'array']`, `role_ids.*` → `['integer', 'exists:roles,id']`)
+- `UpdateUserRequest` — same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so email uniqueness ignores the current user
+- `StoreRoleRequest` — validates `name` (required, unique on `roles`), `description` (nullable, max 1000), `permissions` (nullable array of permission IDs, `exists:permissions,id`)
+- `UpdateRoleRequest` — same as `StoreRoleRequest` but `name` uniqueness ignores the current role via `->ignore($this->route('role'))`
 - `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
 - `UpdateCategoryRequest` — same rules as `StoreCategoryRequest` except the slug uniqueness check ignores the current category via `Rule::unique('categories', 'slug')->ignore($this->route('category'))`.
 - `StoreProductRequest` — validates `name`, `sku` (unique), `description`, `category_id` (nullable FK), `type` (enum), `is_active`, `price` (integer cents), `price_type` (enum), `billing_interval` + `billing_interval_count` (required when `type = subscription`, via `Rule::requiredIf`), `trial_period_days` (nullable int), `track_inventory`, `stock_quantity` (required when `track_inventory = true`), `image` (nullable image file, max 2 MB). `sort_order` excluded — auto-assigned scoped to `category_id`.
@@ -482,7 +461,9 @@ The `Sortable` trait only fires on `creating`. On update, `ProductController::up
 ### Authorization in `UserController`
 - Route-level: `can:edit_user` / `can:delete_user` gates control access to routes
 - Controller-level: `$this->authorize('update', $user)` / `$this->authorize('delete', $user)` enforce per-model policy (e.g., admin can't edit another admin)
-- `show()` passes `canEdit`, `canDelete` as server-side Inertia props — computed via `Gate::allows()` AND `$viewer->can('update'/'delete', $user)` — so the frontend never re-derives these. `canManagePermissions` was removed; permission set assignment is now part of the user create/edit form.
+- `show()` passes `canEdit`, `canDelete` as server-side Inertia props — computed via `Gate::allows()` AND `$viewer->can('update'/'delete', $user)` — so the frontend never re-derives these.
+- `create()` / `edit()` pass `roles` (all available RBAC roles) and `selectedRoleIds` (array of currently assigned role IDs) to the view. Role assignment syncs via `$user->roles()->syncWithPivotValues($roleIds, ['assigned_by' => auth()->id()])`.
+- `show()` loads `roles.permissions` for display.
 - `AuthorizesRequests` trait is on the base `Controller` class — required for `$this->authorize()` to exist (Laravel 12+ omits it by default)
 
 Password rules differ by environment: production requires 12+ chars, mixed case, numbers, symbols, not compromised.

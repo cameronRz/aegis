@@ -1,17 +1,17 @@
 import { Head, useForm } from '@inertiajs/react';
-import { store as storePermissionSet } from '@/actions/App/Http/Controllers/PermissionSetController';
+import { store as storeRole } from '@/actions/App/Http/Controllers/RoleController';
 import { Button } from '@/components/ui/button';
-import { permissionSets as permissionSetsRoute } from '@/routes/admin';
+import { roles as rolesRoute } from '@/routes/admin';
 import type { Permission } from '@/types';
-import { PermissionSetFormFields } from './permission-set-form-fields';
-import type { PermissionSetFormData } from './permission-set-form-fields';
+import { RoleFormFields } from './role-form-fields';
+import type { RoleFormData } from './role-form-fields';
 
 type Props = {
     allPermissions: Permission[];
 };
 
-export default function PermissionSetsCreate({ allPermissions }: Props) {
-    const { data, setData, post, processing, errors } = useForm<PermissionSetFormData>({
+export default function RolesCreate({ allPermissions }: Props) {
+    const { data, setData, post, processing, errors } = useForm<RoleFormData>({
         name: '',
         description: '',
         permissions: [],
@@ -19,15 +19,15 @@ export default function PermissionSetsCreate({ allPermissions }: Props) {
 
     return (
         <>
-            <Head title="Create Permission Set" />
+            <Head title="Create Role" />
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-                    post(storePermissionSet.url());
+                    post(storeRole.url());
                 }}
                 className="flex h-full flex-1 flex-col gap-6 p-4"
             >
-                <PermissionSetFormFields
+                <RoleFormFields
                     data={data}
                     setData={setData}
                     errors={errors}
@@ -36,7 +36,7 @@ export default function PermissionSetsCreate({ allPermissions }: Props) {
 
                 <div className="flex items-center gap-4">
                     <Button type="submit" disabled={processing}>
-                        Create Permission Set
+                        Create Role
                     </Button>
                 </div>
             </form>
@@ -44,9 +44,9 @@ export default function PermissionSetsCreate({ allPermissions }: Props) {
     );
 }
 
-PermissionSetsCreate.layout = {
+RolesCreate.layout = {
     breadcrumbs: [
-        { title: 'Permission Sets', href: permissionSetsRoute.url() },
-        { title: 'Create Permission Set' },
+        { title: 'Roles', href: rolesRoute.url() },
+        { title: 'Create Role' },
     ],
 };

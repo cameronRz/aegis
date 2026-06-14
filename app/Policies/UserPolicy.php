@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 
 class UserPolicy
@@ -13,7 +13,7 @@ class UserPolicy
             return false;
         }
 
-        if ($viewer->role === Role::SiteAdmin) {
+        if ($viewer->tier === Tier::SiteAdmin) {
             return true;
         }
 
@@ -26,7 +26,7 @@ class UserPolicy
             return false;
         }
 
-        if ($viewer->role === Role::SiteAdmin) {
+        if ($viewer->tier === Tier::SiteAdmin) {
             return true;
         }
 

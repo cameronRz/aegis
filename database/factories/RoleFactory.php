@@ -2,19 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Models\PermissionSet;
+use App\Models\Role;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<PermissionSet>
+ * @extends Factory<Role>
  */
-class PermissionSetFactory extends Factory
+class RoleFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [

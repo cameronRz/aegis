@@ -21,8 +21,8 @@ import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { formatCents } from '@/lib/money';
 import { products as adminProductsRoute } from '@/routes/admin';
 import { trash as productsTrashRoute } from '@/routes/admin/products';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Auth, PaginatedData, Product, Role } from '@/types';
+import { PRIVILEGED_TIERS } from '@/types';
+import type { Auth, PaginatedData, Product, Tier } from '@/types';
 
 type Props = {
     products: PaginatedData<Product>;
@@ -137,7 +137,7 @@ export default function ProductsIndex({ products, filters }: Props) {
                         className="max-w-sm"
                     />
                     <div className="flex items-center gap-3">
-                        {PRIVILEGED_ROLES.includes(auth.user.role as Role) && (
+                        {PRIVILEGED_TIERS.includes(auth.user.tier as Tier) && (
                             <Link
                                 href={productsTrashRoute.url()}
                                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"

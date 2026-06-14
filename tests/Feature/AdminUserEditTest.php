@@ -1,10 +1,9 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Permission;
-use App\Models\PermissionSet;
+use App\Models\Role;
 use App\Models\User;
-use App\Models\UserPermissionSet;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -19,9 +18,9 @@ beforeEach(function () {
         'description' => null,
     ]);
 
-    $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
-    $this->target = User::factory()->create(['role' => Role::User]);
+    $this->siteAdmin = User::factory()->create(['tier' => Tier::SiteAdmin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
+    $this->target = User::factory()->create(['tier' => Tier::User]);
 });
 
 // --- Access: GET /admin/users/{user}/edit ---
@@ -31,7 +30,7 @@ it('redirects guests to login on the edit page', function () {
 });
 
 it('forbids regular users without the permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get("/admin/users/{$this->target->id}/edit")->assertForbidden();
 });
@@ -44,12 +43,12 @@ it('allows admins to access the edit page', function () {
     actingAs($this->admin)->get("/admin/users/{$this->target->id}/edit")->assertOk();
 });
 
-it('allows users with the edit_user permission set to access the edit page', function () {
-    $set = PermissionSet::create(['name' => 'Staff']);
-    $set->permissions()->sync([$this->editPermission->id]);
+it('allows users with the edit_user role to access the edit page', function () {
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->editPermission->id]);
 
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $user->roles()->attach($role->id, ['assigned_by' => null]);
 
     actingAs($user)->get("/admin/users/{$this->target->id}/edit")->assertOk();
 });
@@ -59,7 +58,7 @@ it('blocks self-editing on the edit page', function () {
 });
 
 it('blocks an admin from editing another admin', function () {
-    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+    $anotherAdmin = User::factory()->create(['tier' => Tier::Admin]);
 
     actingAs($this->admin)->get("/admin/users/{$anotherAdmin->id}/edit")->assertForbidden();
 });
@@ -75,7 +74,7 @@ it('passes all three roles to site admins', function () {
         ->get("/admin/users/{$this->target->id}/edit")
         ->assertInertia(fn ($page) => $page
             ->component('users/edit')
-            ->where('availableRoles', ['site_admin', 'admin', 'user'])
+            ->where('availableTiers', ['site_admin', 'admin', 'user'])
         );
 });
 
@@ -83,7 +82,7 @@ it('passes only user role to admins', function () {
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
         ->assertInertia(fn ($page) => $page
-            ->where('availableRoles', ['user'])
+            ->where('availableTiers', ['user'])
         );
 });
 
@@ -104,7 +103,7 @@ it('updates a user and redirects to their show page', function () {
         'first_name' => 'Updated',
         'last_name' => 'Name',
         'email' => 'updated@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ]);
 
     $response->assertRedirect("/admin/users/{$this->target->id}");
@@ -113,7 +112,7 @@ it('updates a user and redirects to their show page', function () {
     expect($this->target->first_name)->toBe('Updated')
         ->and($this->target->last_name)->toBe('Name')
         ->and($this->target->email)->toBe('updated@example.com')
-        ->and($this->target->role)->toBe(Role::User);
+        ->and($this->target->tier)->toBe(Tier::User);
 });
 
 it('blocks self-editing on update', function () {
@@ -121,18 +120,18 @@ it('blocks self-editing on update', function () {
         'first_name' => 'Hacked',
         'last_name' => 'Name',
         'email' => 'hacked@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertForbidden();
 });
 
 it('blocks an admin from updating another admin', function () {
-    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+    $anotherAdmin = User::factory()->create(['tier' => Tier::Admin]);
 
     actingAs($this->admin)->patch("/admin/users/{$anotherAdmin->id}", [
         'first_name' => 'Hacked',
         'last_name' => 'Name',
         'email' => 'hacked@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertForbidden();
 });
 
@@ -141,8 +140,8 @@ it('rejects an admin trying to assign a privileged role', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'site_admin',
-    ])->assertSessionHasErrors('role');
+        'tier' => 'site_admin',
+    ])->assertSessionHasErrors('tier');
 });
 
 it('allows site admins to update users to any role', function () {
@@ -150,10 +149,10 @@ it('allows site admins to update users to any role', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'admin',
+        'tier' => 'admin',
     ])->assertRedirect();
 
-    expect($this->target->refresh()->role)->toBe(Role::Admin);
+    expect($this->target->refresh()->tier)->toBe(Tier::Admin);
 });
 
 it('rejects an update with a duplicate email', function () {
@@ -163,73 +162,74 @@ it('rejects an update with a duplicate email', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'taken@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertSessionHasErrors('email');
 });
 
-// --- Permission set assignment ---
+// --- Role assignment ---
 
-it('passes permission sets and current set id to the edit page', function () {
-    $set = PermissionSet::factory()->create();
-    $this->target->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+it('passes roles and selected role ids to the edit page', function () {
+    $role = Role::factory()->create();
+    $this->target->roles()->attach($role->id, ['assigned_by' => null]);
 
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
         ->assertInertia(fn ($page) => $page
-            ->has('permissionSets', 1)
-            ->where('currentPermissionSetId', $set->id)
+            ->has('roles', 1)
+            ->where('selectedRoleIds', [$role->id])
         );
 });
 
-it('passes null currentPermissionSetId when user has no set', function () {
+it('passes empty selectedRoleIds when user has no roles', function () {
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
-        ->assertInertia(fn ($page) => $page->where('currentPermissionSetId', null));
+        ->assertInertia(fn ($page) => $page->where('selectedRoleIds', []));
 });
 
-it('assigns a permission set on update', function () {
-    $set = PermissionSet::factory()->create();
+it('assigns a role on update', function () {
+    $role = Role::factory()->create();
 
     actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
         'first_name' => $this->target->first_name,
         'last_name' => $this->target->last_name,
         'email' => $this->target->email,
-        'role' => 'user',
-        'permission_set_id' => $set->id,
+        'tier' => 'user',
+        'role_ids' => [$role->id],
     ])->assertRedirect();
 
-    expect($this->target->fresh()->userPermissionSet?->permission_set_id)->toBe($set->id);
+    expect($this->target->fresh()->roles()->where('role_id', $role->id)->exists())->toBeTrue();
 });
 
-it('clears the permission set when null is sent on update', function () {
-    $set = PermissionSet::factory()->create();
-    $this->target->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+it('clears roles when empty array is sent on update', function () {
+    $role = Role::factory()->create();
+    $this->target->roles()->attach($role->id, ['assigned_by' => null]);
 
     actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
         'first_name' => $this->target->first_name,
         'last_name' => $this->target->last_name,
         'email' => $this->target->email,
-        'role' => 'user',
-        'permission_set_id' => null,
+        'tier' => 'user',
+        'role_ids' => [],
     ])->assertRedirect();
 
-    expect(UserPermissionSet::where('user_id', $this->target->id)->exists())->toBeFalse();
+    expect($this->target->fresh()->roles()->count())->toBe(0);
 });
 
-it('changes the permission set on update', function () {
-    $setA = PermissionSet::factory()->create();
-    $setB = PermissionSet::factory()->create();
-    $this->target->userPermissionSet()->create(['permission_set_id' => $setA->id, 'assigned_by' => null]);
+it('changes roles on update', function () {
+    $roleA = Role::factory()->create();
+    $roleB = Role::factory()->create();
+    $this->target->roles()->attach($roleA->id, ['assigned_by' => null]);
 
     actingAs($this->admin)->patch("/admin/users/{$this->target->id}", [
         'first_name' => $this->target->first_name,
         'last_name' => $this->target->last_name,
         'email' => $this->target->email,
-        'role' => 'user',
-        'permission_set_id' => $setB->id,
+        'tier' => 'user',
+        'role_ids' => [$roleB->id],
     ])->assertRedirect();
 
-    expect($this->target->fresh()->userPermissionSet?->permission_set_id)->toBe($setB->id);
+    $freshRoles = $this->target->fresh()->roles()->pluck('role_id')->toArray();
+    expect($freshRoles)->toBe([$roleB->id]);
 });
 
 it('allows the same email to be submitted unchanged', function () {
@@ -237,6 +237,6 @@ it('allows the same email to be submitted unchanged', function () {
         'first_name' => $this->target->first_name,
         'last_name' => $this->target->last_name,
         'email' => $this->target->email,
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertRedirect();
 });

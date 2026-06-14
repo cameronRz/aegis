@@ -3,8 +3,8 @@
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\PermissionSetController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -66,14 +66,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });
 
-        // Permission sets — literal /create before parametric /{permissionSet}
+        // Roles — literal /create before parametric /{role}
         Route::middleware('can:admin')->group(function () {
-            Route::get('permission-sets', [PermissionSetController::class, 'index'])->name('permission-sets');
-            Route::get('permission-sets/create', [PermissionSetController::class, 'create'])->name('permission-sets.create');
-            Route::post('permission-sets', [PermissionSetController::class, 'store'])->name('permission-sets.store');
-            Route::get('permission-sets/{permissionSet}/edit', [PermissionSetController::class, 'edit'])->name('permission-sets.edit');
-            Route::patch('permission-sets/{permissionSet}', [PermissionSetController::class, 'update'])->name('permission-sets.update');
-            Route::delete('permission-sets/{permissionSet}', [PermissionSetController::class, 'destroy'])->name('permission-sets.destroy');
+            Route::get('roles', [RoleController::class, 'index'])->name('roles');
+            Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::patch('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
         });
 
         Route::middleware('can:view_categories')->group(function () {

@@ -1,6 +1,6 @@
-export type Role = 'site_admin' | 'admin' | 'user';
+export type Tier = 'site_admin' | 'admin' | 'user';
 
-export const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];
+export const PRIVILEGED_TIERS: Tier[] = ['site_admin', 'admin'];
 
 export type Permission = {
     id: number;
@@ -11,12 +11,12 @@ export type Permission = {
     updated_at: string;
 };
 
-export type PermissionSet = {
+export type Role = {
     id: number;
     name: string;
     description: string | null;
     permissions?: Permission[];
-    user_permission_sets_count?: number;
+    users_count?: number;
     created_at: string;
     updated_at: string;
 };
@@ -27,11 +27,11 @@ export type User = {
     last_name: string;
     full_name: string;
     email: string;
-    role: Role;
+    tier: Tier;
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
-    permission_set?: PermissionSet | null;
+    roles?: Role[];
     deleted_at: string | null;
     created_at: string;
     updated_at: string;

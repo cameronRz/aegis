@@ -1,8 +1,8 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Permission;
-use App\Models\PermissionSet;
+use App\Models\Role;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -11,8 +11,8 @@ use function Pest\Laravel\get;
 beforeEach(function () {
     $this->withoutVite();
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
-    $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
+    $this->siteAdmin = User::factory()->create(['tier' => Tier::SiteAdmin]);
 });
 
 it('redirects guests to login', function () {
@@ -20,13 +20,13 @@ it('redirects guests to login', function () {
 });
 
 it('forbids regular users from accessing admin users', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get('/admin/users')->assertForbidden();
 });
 
 it('returns users for an admin', function () {
-    $customers = User::factory(3)->create(['role' => Role::User]);
+    $customers = User::factory(3)->create(['tier' => Tier::User]);
 
     actingAs($this->admin)
         ->get('/admin/users')
@@ -38,7 +38,7 @@ it('returns users for an admin', function () {
 });
 
 it('hides site_admin users from regular admins', function () {
-    User::factory(2)->create(['role' => Role::User]);
+    User::factory(2)->create(['tier' => Tier::User]);
 
     actingAs($this->admin)
         ->get('/admin/users')
@@ -48,7 +48,7 @@ it('hides site_admin users from regular admins', function () {
 });
 
 it('returns all users including site_admins for site admin', function () {
-    User::factory(2)->create(['role' => Role::User]);
+    User::factory(2)->create(['tier' => Tier::User]);
 
     actingAs($this->siteAdmin)
         ->get('/admin/users')
@@ -58,8 +58,8 @@ it('returns all users including site_admins for site admin', function () {
 });
 
 it('filters users by search term', function () {
-    User::factory()->create(['first_name' => 'Alice', 'last_name' => 'Smith', 'role' => Role::User]);
-    User::factory()->create(['first_name' => 'Bob', 'last_name' => 'Jones', 'role' => Role::User]);
+    User::factory()->create(['first_name' => 'Alice', 'last_name' => 'Smith', 'tier' => Tier::User]);
+    User::factory()->create(['first_name' => 'Bob', 'last_name' => 'Jones', 'tier' => Tier::User]);
 
     actingAs($this->admin)
         ->get('/admin/users?search=alice')
@@ -69,8 +69,8 @@ it('filters users by search term', function () {
 });
 
 it('searches by email', function () {
-    User::factory()->create(['email' => 'unique@example.com', 'role' => Role::User]);
-    User::factory(3)->create(['role' => Role::User]);
+    User::factory()->create(['email' => 'unique@example.com', 'tier' => Tier::User]);
+    User::factory(3)->create(['tier' => Tier::User]);
 
     actingAs($this->admin)
         ->get('/admin/users?search=unique@example.com')
@@ -81,13 +81,13 @@ it('searches by email', function () {
 
 it('hides site_admin users from users with view_users permission set', function () {
     $permission = Permission::create(['name' => 'view_users', 'display_name' => 'View Users', 'description' => null]);
-    $set = PermissionSet::create(['name' => 'Staff']);
-    $set->permissions()->sync([$permission->id]);
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$permission->id]);
 
-    $staff = User::factory()->create(['role' => Role::User]);
-    $staff->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+    $staff = User::factory()->create(['tier' => Tier::User]);
+    $staff->roles()->attach($role->id, ['assigned_by' => null]);
 
-    User::factory(2)->create(['role' => Role::User]);
+    User::factory(2)->create(['tier' => Tier::User]);
 
     actingAs($staff)
         ->get('/admin/users')

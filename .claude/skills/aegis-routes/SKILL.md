@@ -38,12 +38,12 @@ PATCH  /admin/users/{user}                                 → admin.users.updat
 DELETE /admin/users/{user}                                 → admin.users.destroy                  (can:delete_user)
 GET    /admin/users/{user}                                 → admin.users.show                     (can:view_users)
 
-GET    /admin/permission-sets                              → admin.permission-sets                (can:admin)
-GET    /admin/permission-sets/create                       → admin.permission-sets.create         (can:admin)
-POST   /admin/permission-sets                              → admin.permission-sets.store          (can:admin)
-GET    /admin/permission-sets/{permissionSet}/edit         → admin.permission-sets.edit           (can:admin)
-PATCH  /admin/permission-sets/{permissionSet}              → admin.permission-sets.update         (can:admin)
-DELETE /admin/permission-sets/{permissionSet}              → admin.permission-sets.destroy        (can:admin)
+GET    /admin/roles                                        → admin.roles                          (can:admin)
+GET    /admin/roles/create                                 → admin.roles.create                   (can:admin)
+POST   /admin/roles                                        → admin.roles.store                    (can:admin)
+GET    /admin/roles/{role}/edit                            → admin.roles.edit                     (can:admin)
+PATCH  /admin/roles/{role}                                 → admin.roles.update                   (can:admin)
+DELETE /admin/roles/{role}                                 → admin.roles.destroy                  (can:admin)
 
 GET   /admin/categories                                    → admin.categories                     (can:view_categories)
 GET   /admin/categories/create                             → admin.categories.create              (can:create_category)
@@ -65,9 +65,9 @@ GET   /admin/products/{product}                            → admin.products.sh
 
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 
-**Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories and products: `products/create` and `products/trash` are declared before `products/{product}`, and `products/{product}/edit` before `products/{product}` (show), and to `permission-sets`: `permission-sets/create` is declared before `permission-sets/{permissionSet}/edit`/`{permissionSet}`. Always declare literal-segment routes before parametric routes at the same depth.
+**Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories, products, and roles: `roles/create` is declared before `roles/{role}/edit`. Always declare literal-segment routes before parametric routes at the same depth.
 
-**Removed:** `POST /admin/users/{user}/permissions/{permission}/toggle` (`admin.users.permissions.toggle`) and `UserPermissionController` were removed entirely as part of the permission-sets migration — individual permission grants are gone, replaced by `permission-sets` CRUD + `permission_set_id` on the user form.
+**Removed:** `permission-sets` routes replaced by `roles` routes (RBAC migration). Individual per-user permission grants are gone; permissions are now bundled into `Role`s and assigned many-to-many.
 ```
 
 ## `routes/settings.php`
@@ -98,7 +98,7 @@ import { trash } from '@/routes/admin/products';
 trash.url();
 ```
 
-Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
+Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`, `@/routes/admin/roles`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
 
 The same pattern applies to shop routes:
 ```ts

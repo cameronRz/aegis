@@ -1,6 +1,6 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -11,9 +11,9 @@ use function Pest\Laravel\post;
 beforeEach(function () {
     $this->withoutVite();
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
-    $this->user = User::factory()->create(['role' => Role::User]);
-    $this->trashed = User::factory()->create(['role' => Role::User]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
+    $this->user = User::factory()->create(['tier' => Tier::User]);
+    $this->trashed = User::factory()->create(['tier' => Tier::User]);
     $this->trashed->delete();
 });
 
@@ -43,7 +43,7 @@ it('does not show active users on the trash page', function () {
 });
 
 it('searches trashed users by name', function () {
-    $other = User::factory()->create(['first_name' => 'Different', 'role' => Role::User]);
+    $other = User::factory()->create(['first_name' => 'Different', 'tier' => Tier::User]);
     $other->delete();
 
     actingAs($this->admin)

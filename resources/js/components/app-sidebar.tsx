@@ -16,7 +16,7 @@ import {
 import { cart as cartRoute, dashboard, shop as shopRoute } from '@/routes';
 import {
     categories as adminCategoriesRoute,
-    permissionSets as adminPermissionSetsRoute,
+    roles as adminRolesRoute,
     products as adminProductsRoute,
     users as adminUsersRoute,
 } from '@/routes/admin';
@@ -75,8 +75,8 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             permission: 'view_products',
         },
         {
-            title: 'Permission Sets',
-            href: adminPermissionSetsRoute.url(),
+            title: 'Roles',
+            href: adminRolesRoute.url(),
             icon: ShieldCheck,
             permission: 'admin',
         },

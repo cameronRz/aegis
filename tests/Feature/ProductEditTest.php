@@ -1,10 +1,10 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Category;
 use App\Models\Permission;
-use App\Models\PermissionSet;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\UploadedFile;
@@ -27,7 +27,7 @@ beforeEach(function () {
         $mock->allows('archivePrice');
     });
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
     $this->editPermission = Permission::create([
         'name' => 'edit_product',
         'display_name' => 'Edit Product',
@@ -43,7 +43,7 @@ it('redirects guests from the edit page', function () {
 });
 
 it('forbids users without edit_product from the edit page', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get("/admin/products/{$this->product->id}/edit")->assertForbidden();
 });
@@ -60,10 +60,10 @@ it('renders the edit page for an admin', function () {
 });
 
 it('renders the edit page for a user with edit_product permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $set = PermissionSet::create(['name' => 'Staff']);
-    $set->permissions()->sync([$this->editPermission->id]);
-    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => $this->admin->id]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->editPermission->id]);
+    $user->roles()->attach($role->id, ['assigned_by' => $this->admin->id]);
 
     actingAs($user)
         ->get("/admin/products/{$this->product->id}/edit")
@@ -73,7 +73,7 @@ it('renders the edit page for a user with edit_product permission', function () 
 // --- update ---
 
 it('forbids users without edit_product from updating', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)
         ->patch("/admin/products/{$this->product->id}", ['name' => 'New Name'])

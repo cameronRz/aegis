@@ -1,6 +1,6 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -10,9 +10,9 @@ use function Pest\Laravel\delete;
 beforeEach(function () {
     $this->withoutVite();
 
-    $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
-    $this->target = User::factory()->create(['role' => Role::User]);
+    $this->siteAdmin = User::factory()->create(['tier' => Tier::SiteAdmin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
+    $this->target = User::factory()->create(['tier' => Tier::User]);
 });
 
 it('redirects guests to login', function () {
@@ -20,7 +20,7 @@ it('redirects guests to login', function () {
 });
 
 it('forbids regular users without the permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->delete("/admin/users/{$this->target->id}")->assertForbidden();
 });
@@ -50,7 +50,7 @@ it('blocks self-deletion', function () {
 });
 
 it('blocks an admin from deleting another admin', function () {
-    $anotherAdmin = User::factory()->create(['role' => Role::Admin]);
+    $anotherAdmin = User::factory()->create(['tier' => Tier::Admin]);
 
     actingAs($this->admin)
         ->delete("/admin/users/{$anotherAdmin->id}")

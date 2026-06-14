@@ -7,16 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import type { Permission } from '@/types';
 
-export type PermissionSetFormData = {
+export type RoleFormData = {
     name: string;
     description: string;
     permissions: number[];
 };
 
 type Props = {
-    data: PermissionSetFormData;
-    setData: <K extends keyof PermissionSetFormData>(key: K, value: PermissionSetFormData[K]) => void;
-    errors: Partial<Record<keyof PermissionSetFormData, string>>;
+    data: RoleFormData;
+    setData: <K extends keyof RoleFormData>(key: K, value: RoleFormData[K]) => void;
+    errors: Partial<Record<keyof RoleFormData, string>>;
     allPermissions: Permission[];
 };
 
@@ -34,7 +34,7 @@ function toggleId(ids: number[], id: number): number[] {
     return ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
 }
 
-export function PermissionSetFormFields({ data, setData, errors, allPermissions }: Props) {
+export function RoleFormFields({ data, setData, errors, allPermissions }: Props) {
     const grouped = useMemo(() => {
         const groups: Record<string, Permission[]> = {};
         for (const p of allPermissions) {
@@ -83,31 +83,53 @@ export function PermissionSetFormFields({ data, setData, errors, allPermissions 
                     <CardTitle>Permissions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {Object.entries(grouped).map(([group, permissions], groupIndex) => (
-                        <div key={group}>
-                            {groupIndex > 0 && <Separator className="my-4" />}
-                            <p className="mb-3 text-sm font-medium">{group}</p>
-                            <div className="space-y-2">
-                                {permissions.map((permission) => (
-                                    <div key={permission.id} className="flex items-center gap-3">
-                                        <Checkbox
-                                            id={`perm-${permission.id}`}
-                                            checked={data.permissions.includes(permission.id)}
-                                            onCheckedChange={() =>
-                                                setData('permissions', toggleId(data.permissions, permission.id))
-                                            }
-                                        />
-                                        <Label
-                                            htmlFor={`perm-${permission.id}`}
-                                            className="cursor-pointer font-normal"
-                                        >
-                                            {permission.display_name}
-                                        </Label>
-                                    </div>
-                                ))}
+                    {Object.entries(grouped).map(([group, permissions], groupIndex) => {
+                        const groupIds = permissions.map((p) => p.id);
+                        const allChecked = groupIds.every((id) => data.permissions.includes(id));
+
+                        function toggleGroup() {
+                            if (allChecked) {
+                                setData('permissions', data.permissions.filter((id) => !groupIds.includes(id)));
+                            } else {
+                                setData('permissions', [...new Set([...data.permissions, ...groupIds])]);
+                            }
+                        }
+
+                        return (
+                            <div key={group}>
+                                {groupIndex > 0 && <Separator className="my-4" />}
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-sm font-medium">{group}</p>
+                                    <button
+                                        type="button"
+                                        onClick={toggleGroup}
+                                        className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+                                    >
+                                        {allChecked ? 'Deselect all' : 'Select all'}
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {permissions.map((permission) => (
+                                        <div key={permission.id} className="flex items-center gap-3">
+                                            <Checkbox
+                                                id={`perm-${permission.id}`}
+                                                checked={data.permissions.includes(permission.id)}
+                                                onCheckedChange={() =>
+                                                    setData('permissions', toggleId(data.permissions, permission.id))
+                                                }
+                                            />
+                                            <Label
+                                                htmlFor={`perm-${permission.id}`}
+                                                className="cursor-pointer font-normal"
+                                            >
+                                                {permission.display_name}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {allPermissions.length === 0 && (
                         <p className="text-muted-foreground text-sm">No permissions defined.</p>
                     )}

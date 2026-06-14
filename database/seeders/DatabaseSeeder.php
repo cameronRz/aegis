@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Database\Seeder;
@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'email' => config('admin.site_admin.email'),
             'password' => bcrypt(config('admin.site_admin.password')),
         ]);
-        $siteAdmin->role = Role::SiteAdmin;
+        $siteAdmin->tier = Tier::SiteAdmin;
         $siteAdmin->save();
         $this->createStripeCustomer($stripe, $siteAdmin);
 
@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
             'last_name' => 'Mena',
             'email' => 'dora@email.com',
         ]);
-        $admin->role = Role::Admin;
+        $admin->tier = Tier::Admin;
         $admin->save();
         $this->createStripeCustomer($stripe, $admin);
 
@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->createStripeCustomer($stripe, $benny);
 
-        User::factory(5)->create(['role' => Role::Admin]);
+        User::factory(5)->create(['tier' => Tier::Admin]);
         User::factory(120)->create();
 
         // Permissions

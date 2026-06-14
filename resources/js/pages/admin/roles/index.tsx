@@ -6,28 +6,28 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import {
-    destroy as destroyPermissionSet,
-    edit as editPermissionSet,
-} from '@/actions/App/Http/Controllers/PermissionSetController';
+    destroy as destroyRole,
+    edit as editRole,
+} from '@/actions/App/Http/Controllers/RoleController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
-import { permissionSets as permissionSetsRoute } from '@/routes/admin';
-import { create as permissionSetsCreateRoute } from '@/routes/admin/permission-sets';
-import type { PaginatedData, PermissionSet } from '@/types';
+import { roles as rolesRoute } from '@/routes/admin';
+import { create as rolesCreateRoute } from '@/routes/admin/roles';
+import type { PaginatedData, Role } from '@/types';
 
 type Props = {
-    sets: PaginatedData<PermissionSet>;
+    roles: PaginatedData<Role>;
 };
 
 type PageErrors = { delete?: string };
 
-const columnHelper = createColumnHelper<PermissionSet>();
+const columnHelper = createColumnHelper<Role>();
 
-export default function PermissionSetsIndex({ sets }: Props) {
+export default function RolesIndex({ roles }: Props) {
     const { errors } = usePage<{ errors: PageErrors }>().props;
-    const [setToDelete, setSetToDelete] = useState<PermissionSet | null>(null);
+    const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
     const [deleting, setDeleting] = useState(false);
 
     const columns = useMemo(
@@ -49,7 +49,7 @@ export default function PermissionSetsIndex({ sets }: Props) {
             columnHelper.display({
                 id: 'users_count',
                 header: 'Users',
-                cell: ({ row }) => row.original.user_permission_sets_count ?? 0,
+                cell: ({ row }) => row.original.users_count ?? 0,
             }),
             columnHelper.display({
                 id: 'actions',
@@ -62,14 +62,14 @@ export default function PermissionSetsIndex({ sets }: Props) {
                             asChild
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <Link href={editPermissionSet(row.original).url}>Edit</Link>
+                            <Link href={editRole(row.original).url}>Edit</Link>
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSetToDelete(row.original);
+                                setRoleToDelete(row.original);
                             }}
                         >
                             Delete
@@ -83,21 +83,21 @@ export default function PermissionSetsIndex({ sets }: Props) {
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
-        data: sets.data,
+        data: roles.data,
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
 
     function handleDelete() {
-        if (!setToDelete) return;
+        if (!roleToDelete) return;
 
         setDeleting(true);
 
-        router.delete(destroyPermissionSet(setToDelete).url, {
+        router.delete(destroyRole(roleToDelete).url, {
             preserveState: true,
             onSuccess: (page) => {
                 if (!(page.props as { errors?: PageErrors }).errors?.delete) {
-                    setSetToDelete(null);
+                    setRoleToDelete(null);
                 }
                 setDeleting(false);
             },
@@ -107,31 +107,31 @@ export default function PermissionSetsIndex({ sets }: Props) {
 
     return (
         <>
-            <Head title="Permission Sets" />
+            <Head title="Roles" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <Button asChild>
-                        <Link href={permissionSetsCreateRoute.url()}>Create Permission Set</Link>
+                        <Link href={rolesCreateRoute.url()}>Create Role</Link>
                     </Button>
                 </div>
 
-                <DataTable table={table} emptyMessage="No permission sets found." />
+                <DataTable table={table} emptyMessage="No roles found." />
 
-                <DataTablePagination paginatedData={sets} />
+                <DataTablePagination paginatedData={roles} />
             </div>
 
             <ConfirmDialog
-                open={setToDelete !== null}
+                open={roleToDelete !== null}
                 onOpenChange={(open) => {
-                    if (!open) setSetToDelete(null);
+                    if (!open) setRoleToDelete(null);
                 }}
-                title="Delete Permission Set"
+                title="Delete Role"
                 description={
                     errors.delete ? (
                         <span className="text-destructive text-sm">{errors.delete}</span>
                     ) : (
                         <>
-                            <strong>{setToDelete?.name}</strong> will be permanently deleted.
+                            <strong>{roleToDelete?.name}</strong> will be permanently deleted.
                         </>
                     )
                 }
@@ -143,6 +143,6 @@ export default function PermissionSetsIndex({ sets }: Props) {
     );
 }
 
-PermissionSetsIndex.layout = {
-    breadcrumbs: [{ title: 'Permission Sets', href: permissionSetsRoute.url() }],
+RolesIndex.layout = {
+    breadcrumbs: [{ title: 'Roles', href: rolesRoute.url() }],
 };

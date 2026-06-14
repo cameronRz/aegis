@@ -1,6 +1,6 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\StripeService;
@@ -25,8 +25,8 @@ beforeEach(function () {
         $mock->allows('archiveProduct');
     });
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
-    $this->user = User::factory()->create(['role' => Role::User]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
+    $this->user = User::factory()->create(['tier' => Tier::User]);
     $this->product = Product::factory()->create();
     $this->product->delete();
 });

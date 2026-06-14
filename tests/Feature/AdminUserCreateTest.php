@@ -1,10 +1,9 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Permission;
-use App\Models\PermissionSet;
+use App\Models\Role;
 use App\Models\User;
-use App\Models\UserPermissionSet;
 use App\Services\StripeService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
@@ -30,8 +29,8 @@ beforeEach(function () {
         'description' => null,
     ]);
 
-    $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->siteAdmin = User::factory()->create(['tier' => Tier::SiteAdmin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
 });
 
 // --- Access ---
@@ -41,7 +40,7 @@ it('redirects guests to login', function () {
 });
 
 it('forbids regular users without the permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get('/admin/users/create')->assertForbidden();
 });
@@ -54,12 +53,12 @@ it('allows admins to access the create page', function () {
     actingAs($this->admin)->get('/admin/users/create')->assertOk();
 });
 
-it('allows users with the create_user permission set to access the create page', function () {
-    $set = PermissionSet::create(['name' => 'Staff']);
-    $set->permissions()->sync([$this->createPermission->id]);
+it('allows users with the create_user role to access the create page', function () {
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->createPermission->id]);
 
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->userPermissionSet()->create(['permission_set_id' => $set->id, 'assigned_by' => null]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $user->roles()->attach($role->id, ['assigned_by' => null]);
 
     actingAs($user)->get('/admin/users/create')->assertOk();
 });
@@ -71,7 +70,7 @@ it('passes all three roles to site admins', function () {
         ->get('/admin/users/create')
         ->assertInertia(fn ($page) => $page
             ->component('users/create')
-            ->where('availableRoles', ['site_admin', 'admin', 'user'])
+            ->where('availableTiers', ['site_admin', 'admin', 'user'])
         );
 });
 
@@ -79,7 +78,7 @@ it('passes only user role to admins', function () {
     actingAs($this->admin)
         ->get('/admin/users/create')
         ->assertInertia(fn ($page) => $page
-            ->where('availableRoles', ['user'])
+            ->where('availableTiers', ['user'])
         );
 });
 
@@ -92,7 +91,7 @@ it('creates a user and redirects to their show page', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ]);
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -101,7 +100,7 @@ it('creates a user and redirects to their show page', function () {
 
     expect($newUser->first_name)->toBe('Jane')
         ->and($newUser->last_name)->toBe('Doe')
-        ->and($newUser->role)->toBe(Role::User)
+        ->and($newUser->tier)->toBe(Tier::User)
         ->and($newUser->email_verified_at)->not->toBeNull()
         ->and($newUser->stripe_customer_id)->toBe('cus_test123');
 });
@@ -119,7 +118,7 @@ it('still creates the user if stripe customer creation fails', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertRedirect();
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -133,7 +132,7 @@ it('sends a password reset email to the new user', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ]);
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -146,8 +145,8 @@ it('rejects an admin trying to assign a privileged role', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'site_admin',
-    ])->assertSessionHasErrors('role');
+        'tier' => 'site_admin',
+    ])->assertSessionHasErrors('tier');
 });
 
 it('allows site admins to create users with any role', function () {
@@ -157,50 +156,49 @@ it('allows site admins to create users with any role', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'admin',
+        'tier' => 'admin',
     ])->assertRedirect();
 
-    expect(User::where('email', 'jane@example.com')->first()?->role)->toBe(Role::Admin);
+    expect(User::where('email', 'jane@example.com')->first()?->tier)->toBe(Tier::Admin);
 });
 
-it('passes permission sets to the create page', function () {
-    PermissionSet::factory()->create(['name' => 'Support Staff']);
+it('passes roles to the create page', function () {
+    Role::factory()->create(['name' => 'Support Staff']);
 
     actingAs($this->admin)
         ->get('/admin/users/create')
-        ->assertInertia(fn ($page) => $page->has('permissionSets', 1));
+        ->assertInertia(fn ($page) => $page->has('roles', 1));
 });
 
-it('assigns a permission set when creating a user', function () {
+it('assigns roles when creating a user', function () {
     Notification::fake();
 
-    $set = PermissionSet::factory()->create();
+    $role = Role::factory()->create();
 
     actingAs($this->admin)->post('/admin/users', [
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
-        'permission_set_id' => $set->id,
+        'tier' => 'user',
+        'role_ids' => [$role->id],
     ])->assertRedirect();
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
-    expect(UserPermissionSet::where('user_id', $newUser->id)->exists())->toBeTrue();
-    expect($newUser->userPermissionSet->permission_set_id)->toBe($set->id);
+    expect($newUser->roles()->where('role_id', $role->id)->exists())->toBeTrue();
 });
 
-it('creates a user without a permission set when none is provided', function () {
+it('creates a user without roles when none are provided', function () {
     Notification::fake();
 
     actingAs($this->admin)->post('/admin/users', [
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertRedirect();
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
-    expect(UserPermissionSet::where('user_id', $newUser->id)->exists())->toBeFalse();
+    expect($newUser->roles()->count())->toBe(0);
 });
 
 it('rejects creation with a duplicate email', function () {
@@ -210,6 +208,6 @@ it('rejects creation with a duplicate email', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'taken@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertSessionHasErrors('email');
 });
