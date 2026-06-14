@@ -7,7 +7,6 @@ export const roleConfig: Record<
 > = {
     site_admin: { label: 'Site Admin', variant: 'destructive' },
     admin: { label: 'Admin', variant: 'default' },
-    manager: { label: 'Manager', variant: 'secondary' },
     user: { label: 'User', variant: 'outline' },
 };
 

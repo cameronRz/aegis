@@ -22,11 +22,19 @@ metadata:
 | File | Description |
 |---|---|
 | `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged roles (`PRIVILEGED_ROLES`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
-| `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
+| `users/show.tsx` | User detail with role badge and a "Permission Set" card (shows set name or "None" + read-only permission list); "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets). Individual permission toggles removed. |
 | `users/trash.tsx` | Admin-only trash bin mirroring `products/trash.tsx`: paginated table of soft-deleted users with First Name, Last Name, Email, Role badge, Deleted date columns. Restore button (POST, `can:delete_user`, no confirmation). Permanently Delete button (`can:admin`) opens `ConfirmDialog`. Search by name/email. "Users" breadcrumb links back to the index. |
 | `users/create.tsx` | Create user form; uses `UserFormFields`; sends password reset email on creation |
 | `users/edit.tsx` | Edit user form; pre-fills from `user` prop; uses PATCH via `updateUser(user).url`; uses `UserFormFields`; self-editing blocked (403) |
-| `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type and `UserFormFields` component. Owns `roleLabels`, `togglePermission` logic, and the permissions card. Accepts `permissionsDescription?` to customise the card subtitle between create and edit contexts. Used by both `create.tsx` and `edit.tsx`. |
+| `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type and `UserFormFields` component. Owns `roleLabels` and a permission set `Select` dropdown (nullable — "No set"). Below the selector shows a read-only list of the selected set's permissions. Individual permission toggles are gone. Used by both `create.tsx` and `edit.tsx`. |
+
+#### `permission-sets/`
+| File | Description |
+|---|---|
+| `admin/permission-sets/index.tsx` | Permission set list with `DataTable` + `DataTablePagination`; columns: Name, Description, Permissions count (from `permissions_count`), Users count (from `user_permission_sets_count`), Edit/Delete action buttons; "Create Permission Set" button. Delete opens `ConfirmDialog`; if the set is in use the backend returns a 422 with an error message surfaced inline. |
+| `admin/permission-sets/create.tsx` | Create form; uses `PermissionSetFormFields`; submits via POST to `storePermissionSet.url()`. |
+| `admin/permission-sets/edit.tsx` | Edit form pre-filled from `permissionSet` prop; submits via PATCH using `updatePermissionSet(permissionSet).url`. |
+| `admin/permission-sets/permission-set-form-fields.tsx` | **Shared domain component** — exports `PermissionSetFormData` type and `PermissionSetFormFields` component. Renders name and description inputs plus a permission checkbox grid; permissions are grouped by domain area (Users, Categories, Products, etc.) using the `display_name` prefix. Used by both `create.tsx` and `edit.tsx`. |
 
 #### `categories/`
 | File | Description |
@@ -144,7 +152,7 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Shop (no gate — all authenticated users), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Shop (no gate — all authenticated users), Users (`view_users`), Permission Sets (`admin`), Categories (`view_categories`), Products (`view_products`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |
@@ -164,16 +172,37 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 
 ### `auth.ts` — Core domain types
 ```ts
-type Role = 'site_admin' | 'admin' | 'manager' | 'user';
+type Role = 'site_admin' | 'admin' | 'user';
 
 const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];  // import from @/types, never redefine locally
 
 type Permission = { id, name, display_name, description, created_at, updated_at };
 
+type PermissionSet = {
+    id: number;
+    name: string;
+    description: string | null;
+    permissions?: Permission[];
+    user_permission_sets_count?: number;
+    created_at: string;
+    updated_at: string;
+};
+
+type UserPermissionSet = {
+    id: number;
+    user_id: number;
+    permission_set_id: number;
+    assigned_by: number | null;
+    permission_set?: PermissionSet;
+    created_at: string;
+    updated_at: string;
+};
+
 type User = {
     id, first_name, last_name, full_name, email,
     role: Role, avatar?, email_verified_at,
-    two_factor_enabled?, permissions?: Permission[],
+    two_factor_enabled?,
+    permission_set?: PermissionSet | null,
     deleted_at: string | null,
     created_at, updated_at
 };
@@ -252,7 +281,7 @@ Import for displaying billing intervals in subscription-related UI (product show
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
 
 ### Server-side authorization props (show pages)
-Per-model authorization decisions (can this viewer edit/delete THIS specific user?) are computed on the server and passed as Inertia props — never re-derived on the client. The `users/show` page receives `canEdit`, `canDelete`, `canManagePermissions` as boolean props. The `Can` type in `auth` only covers global capabilities (can the user edit users at all), not per-record ones.
+Per-model authorization decisions (can this viewer edit/delete THIS specific user?) are computed on the server and passed as Inertia props — never re-derived on the client. The `users/show` page receives `canEdit` and `canDelete` as boolean props. (`canManagePermissions` was removed — permission set assignment is part of the user create/edit form, not the show page.) The `Can` type in `auth` only covers global capabilities (can the user edit users at all), not per-record ones.
 
 ---
 
@@ -444,6 +473,16 @@ import { edit as editCategory, update as updateCategory, destroy as destroyCateg
 editCategory(category).url          // GET /admin/categories/{id}/edit  (string property)
 updateCategory(category).url        // PATCH /admin/categories/{id}      (string property)
 destroyCategory(category).url       // DELETE /admin/categories/{id}     (string property)
+
+import { index as adminPermissionSetsRoute, store as storePermissionSet, create as createPermissionSet } from '@/actions/App/Http/Controllers/PermissionSetController';
+import { edit as editPermissionSet, update as updatePermissionSet, destroy as destroyPermissionSet } from '@/actions/App/Http/Controllers/PermissionSetController';
+
+adminPermissionSetsRoute.url()      // GET /admin/permission-sets        (no-arg, method on function)
+createPermissionSet.url()           // GET /admin/permission-sets/create (no-arg, method on function)
+storePermissionSet.url()            // POST /admin/permission-sets       (no-arg, method on function)
+editPermissionSet(set).url          // GET /admin/permission-sets/{id}/edit  (string property)
+updatePermissionSet(set).url        // PATCH /admin/permission-sets/{id}     (string property)
+destroyPermissionSet(set).url       // DELETE /admin/permission-sets/{id}    (string property)
 ```
 
 Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admin` yields `undefined` — always access them as properties on the parent route function.
