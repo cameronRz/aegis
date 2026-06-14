@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { destroy as destroyUser, edit as editUser } from '@/actions/App/Http/Controllers/UserController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { RoleBadge } from '@/components/role-badge';
+import { TierBadge } from '@/components/tier-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { users as adminUsersRoute } from '@/routes/admin';
@@ -40,7 +40,7 @@ export default function UserShow({ user, canEdit, canDelete }: Props) {
                                 <CardDescription>{user.email}</CardDescription>
                             </div>
                             <div className="flex items-center gap-3">
-                                <RoleBadge role={user.tier} />
+                                <TierBadge tier={user.tier} />
                                 {canEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={editUser(user).url}>Edit</Link>

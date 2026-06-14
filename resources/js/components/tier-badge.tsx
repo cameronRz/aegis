@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import type { Tier } from '@/types';
 
-export const roleConfig: Record<
+export const tierConfig: Record<
     Tier,
     { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
@@ -10,8 +10,8 @@ export const roleConfig: Record<
     user: { label: 'User', variant: 'outline' },
 };
 
-export function RoleBadge({ role }: { role: Tier }) {
-    const { label, variant } = roleConfig[role];
+export function TierBadge({ tier }: { tier: Tier }) {
+    const { label, variant } = tierConfig[tier];
 
     return <Badge variant={variant}>{label}</Badge>;
 }

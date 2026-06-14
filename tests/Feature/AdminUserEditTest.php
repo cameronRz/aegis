@@ -67,9 +67,9 @@ it('allows a site admin to edit another admin', function () {
     actingAs($this->siteAdmin)->get("/admin/users/{$this->admin->id}/edit")->assertOk();
 });
 
-// --- Role availability on the edit page ---
+// --- Tier availability on the edit page ---
 
-it('passes all three roles to site admins', function () {
+it('passes all three tiers to site admins', function () {
     actingAs($this->siteAdmin)
         ->get("/admin/users/{$this->target->id}/edit")
         ->assertInertia(fn ($page) => $page
@@ -78,7 +78,7 @@ it('passes all three roles to site admins', function () {
         );
 });
 
-it('passes only user role to admins', function () {
+it('passes only user tier to admins', function () {
     actingAs($this->admin)
         ->get("/admin/users/{$this->target->id}/edit")
         ->assertInertia(fn ($page) => $page

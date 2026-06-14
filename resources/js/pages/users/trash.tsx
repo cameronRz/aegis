@@ -12,7 +12,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
-import { RoleBadge } from '@/components/role-badge';
+import { TierBadge } from '@/components/tier-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
@@ -50,7 +50,7 @@ export default function UsersTrash({ users, filters }: Props) {
             columnHelper.accessor('email', { header: 'Email' }),
             columnHelper.accessor('tier', {
                 header: 'Tier',
-                cell: ({ getValue }) => <RoleBadge role={getValue() as Tier} />,
+                cell: ({ getValue }) => <TierBadge tier={getValue() as Tier} />,
             }),
             columnHelper.display({
                 id: 'deleted_at',

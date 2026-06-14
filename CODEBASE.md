@@ -65,7 +65,7 @@ rm public/storage && ln -s ../storage/app/public public/storage
 
 Detailed domain knowledge is in project skills — activate them when working in that area:
 
-- **`aegis-models`** — User/Permission/Category models, Role and PermissionName enums, Sortable trait, gates, `user_permissions` pivot, database tables, Fortify auth config, form validation
+- **`aegis-models`** — User/Permission/Role/Category models, Tier and PermissionName enums, Sortable trait, gates, `role_user`/`role_permissions` pivots, database tables, Fortify auth config, form validation
 - **`aegis-routes`** — All route definitions with middleware and named route index
 - **`aegis-frontend`** — React pages, component catalog, TypeScript types, Inertia shared props, Tailwind design tokens
 
@@ -77,9 +77,7 @@ See **`.claude/planning/PLANS.md`** for the full index, current focus, and seque
 |---|---|
 | `PLANS.md` | Master index — start here each session |
 | `TEMPLATE.md` | Copy this when starting a new plan |
-| `01-cleanup.md` | Architectural fixes before Phase 5 (current) |
-| `02-permission-sets.md` | Permission sets feature — replaces manager role |
-| `03-cart-checkout.md` | Cart/checkout/webhooks/orders/subscriptions (Phases 5–7) |
+| `03-cart-checkout.md` | Cart/checkout/webhooks/orders/subscriptions (Phases 5–7) — current focus |
 | `completed/` | Finished plans kept for reference |
 
 ---
@@ -112,10 +110,10 @@ If a change introduces an entirely new domain area that doesn't fit an existing 
 - **Breadcrumbs on every page** — set via `.layout` property on Inertia page components
 - **Pagination** — use `PaginatedData<T>` type for paginated responses; 15 per page standard
 - **Permissions via `PermissionName` enum** — permission names are cases on `App\Enum\PermissionName` (e.g. `PermissionName::EditUser`). Adding a new permission requires: a new enum case, a gate in `AppServiceProvider` (auto-registered via `PermissionName::cases()` loop), and a corresponding row in `PermissionSeeder`. The `->value` is the slug stored in the `permissions` table `name` column.
-- **Pivot audit trail** — `granted_by` on `user_permissions` tracks who granted each permission; follow this pattern for future auditable pivots
+- **Pivot audit trail** — `assigned_by` on `role_user` tracks who assigned each role; follow this pattern for future auditable pivots
 - **Pivot table naming vs entity table naming** — Laravel's alphabetical pivot convention (`role_user`, `cart_product`) applies only to `belongsToMany` intermediate tables with no dedicated model. If the join record has its own model, its own `id`, domain-specific columns, or is referenced in routes, name the table after the model instead (`cart_items`, `order_items`). The test: is it a `belongsToMany` (pivot) or a `hasMany`/`belongsTo` chain (entity)?
 - **Index pages** — use `DataTable` + `DataTablePagination` components and the `useDebouncedSearch` hook; do not inline the TanStack table rendering, pagination buttons, or debounce logic
 - **Destructive confirmations** — always use `ConfirmDialog` from `@/components/confirm-dialog`; do not inline the `Dialog + Alert[destructive]` pattern
-- **Role assignment logic** — call `$user->assignableRoles()` (returns `Role[]`); never re-derive inline
+- **Tier assignment logic** — call `$user->assignableTiers()` (returns `Tier[]`); never re-derive inline. Site admins get all three tiers; everyone else gets only `[Tier::User]`.
 - **Product search** — use `->search($request->input('search'))` scope on the `Product` query builder
 - **Narrowing nullable relationship types** — when a controller guarantees a relationship is always loaded, use `Omit` to replace the base nullable field rather than intersecting: `type PageItem = Omit<CartItem, 'product'> & { product: Product }`. Intersection leaves the optional `?` in play; `Omit` removes it entirely.

@@ -21,7 +21,7 @@ metadata:
 #### `users/`
 | File | Description |
 |---|---|
-| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged tiers (`PRIVILEGED_TIERS`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
+| `users/index.tsx` | User list with search, pagination (15/page), tier badges (`TierBadge`); "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged tiers (`PRIVILEGED_TIERS`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
 | `users/show.tsx` | User detail with tier badge and a "Roles" card (lists each assigned RBAC role by name + its permissions); "Edit" button in card header and subtle "Delete user" text link shown when `canEdit`/`canDelete`. |
 | `users/trash.tsx` | Admin-only trash bin: paginated table of soft-deleted users with First Name, Last Name, Email, Tier badge, Deleted date columns. Restore button (POST, `can:delete_user`, no confirmation). Permanently Delete button (`can:admin`) opens `ConfirmDialog`. Search by name/email. "Users" breadcrumb links back to the index. |
 | `users/create.tsx` | Create user form; props: `availableRoles: Tier[]`, `roles: Role[]`; uses `UserFormFields`; sends password reset email on creation |
@@ -136,12 +136,12 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 | Component | File | Exports |
 |---|---|---|
 | `ProductTypeBadge` | `product-type-badge.tsx` | `ProductTypeBadge` component + `productTypeConfig` record |
-| `RoleBadge` | `role-badge.tsx` | `RoleBadge` component + `roleConfig` record |
+| `TierBadge` | `tier-badge.tsx` | `TierBadge` component + `tierConfig` record |
 | `ConfirmDialog` | `confirm-dialog.tsx` | `ConfirmDialog` component |
 
 **`ConfirmDialog` props:** `open`, `onOpenChange`, `title`, `alertTitle?` (default: "Are you sure?"), `description: ReactNode`, `confirmLabel?` (default: "Delete"), `processing?`, `onConfirm`. Use for all destructive confirmations — do not inline the `Dialog + Alert[destructive]` pattern.
 
-**`productTypeConfig` / `roleConfig`:** Import the config objects when you need to destructure label/variant for a single value; import the badge component when rendering a `<Badge>` directly.
+**`productTypeConfig` / `tierConfig`:** Import the config objects when you need to destructure label/variant for a single value; import the badge component when rendering a `<Badge>` directly.
 
 ### Shared hook
 `useDebouncedSearch(serverValue, route, delay?)` — `resources/js/hooks/use-debounced-search.ts`. Returns `[search, setSearch]`. Fires a debounced `router.get` after the user stops typing. Use in every index page that has a search input.
