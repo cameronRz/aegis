@@ -1,7 +1,8 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -22,14 +23,14 @@ beforeEach(function () {
         );
     });
 
-    $this->createUserPermission = Permission::create([
+    $this->createPermission = Permission::create([
         'name' => 'create_user',
         'display_name' => 'Create Users',
-        'description' => 'Create new user accounts.',
+        'description' => null,
     ]);
 
-    $this->siteAdmin = User::factory()->create(['role' => Role::SiteAdmin]);
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->siteAdmin = User::factory()->create(['tier' => Tier::SiteAdmin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
 });
 
 // --- Access ---
@@ -39,15 +40,9 @@ it('redirects guests to login', function () {
 });
 
 it('forbids regular users without the permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get('/admin/users/create')->assertForbidden();
-});
-
-it('forbids managers without the permission', function () {
-    $manager = User::factory()->create(['role' => Role::Manager]);
-
-    actingAs($manager)->get('/admin/users/create')->assertForbidden();
 });
 
 it('allows site admins to access the create page', function () {
@@ -58,45 +53,32 @@ it('allows admins to access the create page', function () {
     actingAs($this->admin)->get('/admin/users/create')->assertOk();
 });
 
-it('allows users with the create_user permission to access the create page', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->createUserPermission->id, ['granted_by' => $this->admin->id]);
+it('allows users with the create_user role to access the create page', function () {
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->createPermission->id]);
+
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $user->roles()->attach($role->id, ['assigned_by' => null]);
 
     actingAs($user)->get('/admin/users/create')->assertOk();
 });
 
-// --- Role availability on the create page ---
+// --- Tier availability on the create page ---
 
-it('passes all four roles to site admins', function () {
+it('passes all three tiers to site admins', function () {
     actingAs($this->siteAdmin)
         ->get('/admin/users/create')
-        ->assertInertia(
-            fn ($page) => $page
-                ->component('users/create')
-                ->where('availableRoles', ['site_admin', 'admin', 'manager', 'user'])
+        ->assertInertia(fn ($page) => $page
+            ->component('users/create')
+            ->where('availableTiers', ['site_admin', 'admin', 'user'])
         );
 });
 
-it('passes only manager and user roles to admins', function () {
+it('passes only user tier to admins', function () {
     actingAs($this->admin)
         ->get('/admin/users/create')
-        ->assertInertia(
-            fn ($page) => $page
-                ->where('availableRoles', ['manager', 'user'])
-                ->where('canAssignPermissions', true)
-        );
-});
-
-it('passes only manager and user roles to create_user permission holders', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->createUserPermission->id, ['granted_by' => $this->admin->id]);
-
-    actingAs($user)
-        ->get('/admin/users/create')
-        ->assertInertia(
-            fn ($page) => $page
-                ->where('availableRoles', ['manager', 'user'])
-                ->where('canAssignPermissions', false)
+        ->assertInertia(fn ($page) => $page
+            ->where('availableTiers', ['user'])
         );
 });
 
@@ -109,7 +91,7 @@ it('creates a user and redirects to their show page', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ]);
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -118,7 +100,7 @@ it('creates a user and redirects to their show page', function () {
 
     expect($newUser->first_name)->toBe('Jane')
         ->and($newUser->last_name)->toBe('Doe')
-        ->and($newUser->role)->toBe(Role::User)
+        ->and($newUser->tier)->toBe(Tier::User)
         ->and($newUser->email_verified_at)->not->toBeNull()
         ->and($newUser->stripe_customer_id)->toBe('cus_test123');
 });
@@ -136,7 +118,7 @@ it('still creates the user if stripe customer creation fails', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertRedirect();
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -150,7 +132,7 @@ it('sends a password reset email to the new user', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ]);
 
     $newUser = User::where('email', 'jane@example.com')->firstOrFail();
@@ -158,61 +140,13 @@ it('sends a password reset email to the new user', function () {
     Notification::assertSentTo($newUser, ResetPassword::class);
 });
 
-it('allows admins to assign permissions on creation', function () {
-    Notification::fake();
-
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    actingAs($this->admin)->post('/admin/users', [
-        'first_name' => 'Jane',
-        'last_name' => 'Doe',
-        'email' => 'jane@example.com',
-        'role' => 'user',
-        'permissions' => [$viewPermission->id],
-    ]);
-
-    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
-
-    expect($newUser->permissions)->toHaveCount(1)
-        ->and($newUser->permissions->first()->name)->toBe('view_users');
-});
-
-it('prevents non-admins with create_user permission from assigning permissions', function () {
-    Notification::fake();
-
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->createUserPermission->id, ['granted_by' => $this->admin->id]);
-
-    $viewPermission = Permission::create([
-        'name' => 'view_users',
-        'display_name' => 'View Users',
-        'description' => 'Access the users list.',
-    ]);
-
-    actingAs($user)->post('/admin/users', [
-        'first_name' => 'Jane',
-        'last_name' => 'Doe',
-        'email' => 'jane@example.com',
-        'role' => 'user',
-        'permissions' => [$viewPermission->id],
-    ]);
-
-    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
-
-    expect($newUser->permissions)->toBeEmpty();
-});
-
 it('rejects an admin trying to assign a privileged role', function () {
     actingAs($this->admin)->post('/admin/users', [
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'site_admin',
-    ])->assertSessionHasErrors('role');
+        'tier' => 'site_admin',
+    ])->assertSessionHasErrors('tier');
 });
 
 it('allows site admins to create users with any role', function () {
@@ -222,10 +156,49 @@ it('allows site admins to create users with any role', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'jane@example.com',
-        'role' => 'admin',
+        'tier' => 'admin',
     ])->assertRedirect();
 
-    expect(User::where('email', 'jane@example.com')->first()?->role)->toBe(Role::Admin);
+    expect(User::where('email', 'jane@example.com')->first()?->tier)->toBe(Tier::Admin);
+});
+
+it('passes roles to the create page', function () {
+    Role::factory()->create(['name' => 'Support Staff']);
+
+    actingAs($this->admin)
+        ->get('/admin/users/create')
+        ->assertInertia(fn ($page) => $page->has('roles', 1));
+});
+
+it('assigns roles when creating a user', function () {
+    Notification::fake();
+
+    $role = Role::factory()->create();
+
+    actingAs($this->admin)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'tier' => 'user',
+        'role_ids' => [$role->id],
+    ])->assertRedirect();
+
+    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
+    expect($newUser->roles()->where('role_id', $role->id)->exists())->toBeTrue();
+});
+
+it('creates a user without roles when none are provided', function () {
+    Notification::fake();
+
+    actingAs($this->admin)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'tier' => 'user',
+    ])->assertRedirect();
+
+    $newUser = User::where('email', 'jane@example.com')->firstOrFail();
+    expect($newUser->roles()->count())->toBe(0);
 });
 
 it('rejects creation with a duplicate email', function () {
@@ -235,6 +208,6 @@ it('rejects creation with a duplicate email', function () {
         'first_name' => 'Jane',
         'last_name' => 'Doe',
         'email' => 'taken@example.com',
-        'role' => 'user',
+        'tier' => 'user',
     ])->assertSessionHasErrors('email');
 });

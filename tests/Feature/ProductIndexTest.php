@@ -1,9 +1,10 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Category;
 use App\Models\Permission;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Mockery\MockInterface;
@@ -21,7 +22,7 @@ beforeEach(function () {
         $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
     });
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
     $this->viewPermission = Permission::create([
         'name' => 'view_products',
         'display_name' => 'View Products',
@@ -34,7 +35,7 @@ it('redirects guests to login', function () {
 });
 
 it('forbids users without the view_products permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get('/admin/products')->assertForbidden();
 });
@@ -52,8 +53,10 @@ it('allows an admin to view products', function () {
 });
 
 it('allows a user with view_products permission to view products', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->viewPermission->id, ['granted_by' => $this->admin->id]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->viewPermission->id]);
+    $user->roles()->attach($role->id, ['assigned_by' => $this->admin->id]);
 
     Product::factory(2)->create();
 

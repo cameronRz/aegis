@@ -18,13 +18,13 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        $allowedRoles = array_column($this->user()->assignableRoles(), 'value');
+        $allowedRoles = array_column($this->user()->assignableTiers(), 'value');
 
         return [
             ...$this->profileRules(),
-            'role' => ['required', 'string', Rule::in($allowedRoles)],
-            'permissions' => ['sometimes', 'nullable', 'array'],
-            'permissions.*' => ['integer', Rule::exists('permissions', 'id')],
+            'tier' => ['required', 'string', Rule::in($allowedRoles)],
+            'role_ids' => ['nullable', 'array'],
+            'role_ids.*' => ['integer', 'exists:roles,id'],
         ];
     }
 }

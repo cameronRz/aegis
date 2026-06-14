@@ -21,12 +21,20 @@ metadata:
 #### `users/`
 | File | Description |
 |---|---|
-| `users/index.tsx` | User list with search, pagination (15/page), role badges; "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged roles (`PRIVILEGED_ROLES`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
-| `users/show.tsx` | User detail with role badge and permission toggle controls; "Edit" button in card header and subtle "Delete user" text link (opens a Dialog with destructive Alert for confirmation) shown when `auth.can.edit_user` / `auth.can.delete_user` (hidden for self and privileged targets) |
-| `users/trash.tsx` | Admin-only trash bin mirroring `products/trash.tsx`: paginated table of soft-deleted users with First Name, Last Name, Email, Role badge, Deleted date columns. Restore button (POST, `can:delete_user`, no confirmation). Permanently Delete button (`can:admin`) opens `ConfirmDialog`. Search by name/email. "Users" breadcrumb links back to the index. |
-| `users/create.tsx` | Create user form; uses `UserFormFields`; sends password reset email on creation |
-| `users/edit.tsx` | Edit user form; pre-fills from `user` prop; uses PATCH via `updateUser(user).url`; uses `UserFormFields`; self-editing blocked (403) |
-| `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type and `UserFormFields` component. Owns `roleLabels`, `togglePermission` logic, and the permissions card. Accepts `permissionsDescription?` to customise the card subtitle between create and edit contexts. Used by both `create.tsx` and `edit.tsx`. |
+| `users/index.tsx` | User list with search, pagination (15/page), tier badges (`TierBadge`); "Create User" button shown when `auth.can.create_user`; "View Trash" subtle link shown for privileged tiers (`PRIVILEGED_TIERS`); Actions column with "Edit" button shown per-row when `auth.can.edit_user` (hidden for self and privileged targets) |
+| `users/show.tsx` | User detail with tier badge and a "Roles" card (lists each assigned RBAC role by name + its permissions); "Edit" button in card header and subtle "Delete user" text link shown when `canEdit`/`canDelete`. |
+| `users/trash.tsx` | Admin-only trash bin: paginated table of soft-deleted users with First Name, Last Name, Email, Tier badge, Deleted date columns. Restore button (POST, `can:delete_user`, no confirmation). Permanently Delete button (`can:admin`) opens `ConfirmDialog`. Search by name/email. "Users" breadcrumb links back to the index. |
+| `users/create.tsx` | Create user form; props: `availableRoles: Tier[]`, `roles: Role[]`; uses `UserFormFields`; sends password reset email on creation |
+| `users/edit.tsx` | Edit user form; props: `user`, `availableRoles: Tier[]`, `roles: Role[]`, `selectedRoleIds: number[]`; pre-fills from props; uses PATCH via `updateUser(user).url`; uses `UserFormFields`; self-editing blocked (403) |
+| `users/user-form-fields.tsx` | **Shared domain component** — exports `UserFormData` type (`role: Tier`, `role_ids: number[]`) and `UserFormFields` component. Has a tier `Select` (access tier) + a checkbox list of RBAC `Role[]`. Below checkboxes shows combined permissions from all checked roles (union, deduplicated). Used by both `create.tsx` and `edit.tsx`. |
+
+#### `admin/roles/`
+| File | Description |
+|---|---|
+| `admin/roles/index.tsx` | Role list with `DataTable` + `DataTablePagination`; columns: Name, Description, Permissions count, Users count (`users_count`), Edit/Delete action buttons; "Create Role" button. Delete opens `ConfirmDialog`; if role is in use the backend returns a session error surfaced inline. |
+| `admin/roles/create.tsx` | Create form; uses `RoleFormFields`; submits via POST to `storeRole.url()`. |
+| `admin/roles/edit.tsx` | Edit form pre-filled from `role` prop (with `permissions`); submits via PATCH using `updateRole(role).url`. |
+| `admin/roles/role-form-fields.tsx` | **Shared domain component** — exports `RoleFormData` type and `RoleFormFields` component. Renders name/description inputs + permission checkbox grid grouped by domain area. Used by both `create.tsx` and `edit.tsx`. |
 
 #### `categories/`
 | File | Description |
@@ -39,7 +47,7 @@ metadata:
 #### `products/`
 | File | Description |
 |---|---|
-| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "View Trash" subtle link shown for admins (`PRIVILEGED_ROLES`); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
+| `products/index.tsx` | Product list with search (name/SKU), pagination (15/page), Type badge column (Physical/Digital/Subscription), price formatted via `formatCents`, Category name column (dash when uncategorised); inactive rows at `opacity-50`; rows are clickable (navigates to show page); "View Trash" subtle link shown for admins (`PRIVILEGED_TIERS`); "Create Product" button shown when `auth.can.create_product`; Edit button shown when `auth.can.edit_product` |
 | `products/show.tsx` | Two-card detail view: Card 1 shows image (if present), name, SKU, type badge, active badge, category, description, Edit button (when `canEdit`), and "Delete product" subtle link (when `canDelete`); Card 2 shows pricing details with type-specific fields (billing interval + trial for subscriptions; inventory tracking for physical). `canEdit` and `canDelete` are computed server-side via `Gate::allows()`. |
 | `products/trash.tsx` | Admin-only trash bin: paginated table of soft-deleted products with Name, SKU, Type badge, Price, Deleted date columns. Restore button (POST, no confirmation). Permanently Delete button opens a confirmation Dialog. Search by name/SKU. "Products" breadcrumb links back to the index. |
 | `products/create.tsx` | Create product form; uses `ProductFormFields`; `sort_order` excluded — auto-assigned server-side; submits with `forceFormData: true` for image upload |
@@ -128,12 +136,12 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 | Component | File | Exports |
 |---|---|---|
 | `ProductTypeBadge` | `product-type-badge.tsx` | `ProductTypeBadge` component + `productTypeConfig` record |
-| `RoleBadge` | `role-badge.tsx` | `RoleBadge` component + `roleConfig` record |
+| `TierBadge` | `tier-badge.tsx` | `TierBadge` component + `tierConfig` record |
 | `ConfirmDialog` | `confirm-dialog.tsx` | `ConfirmDialog` component |
 
 **`ConfirmDialog` props:** `open`, `onOpenChange`, `title`, `alertTitle?` (default: "Are you sure?"), `description: ReactNode`, `confirmLabel?` (default: "Delete"), `processing?`, `onConfirm`. Use for all destructive confirmations — do not inline the `Dialog + Alert[destructive]` pattern.
 
-**`productTypeConfig` / `roleConfig`:** Import the config objects when you need to destructure label/variant for a single value; import the badge component when rendering a `<Badge>` directly.
+**`productTypeConfig` / `tierConfig`:** Import the config objects when you need to destructure label/variant for a single value; import the badge component when rendering a `<Badge>` directly.
 
 ### Shared hook
 `useDebouncedSearch(serverValue, route, delay?)` — `resources/js/hooks/use-debounced-search.ts`. Returns `[search, setSearch]`. Fires a debounced `router.get` after the user stops typing. Use in every index page that has a search input.
@@ -144,7 +152,7 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 | `app-layout.tsx` | Wraps authenticated pages; accepts `breadcrumbs` prop |
 | `auth-layout.tsx` | Wraps auth pages; accepts `title` and `description` props |
 | `app-shell.tsx` | Root app wrapper |
-| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Shop (no gate — all authenticated users), Users (`view_users`), Categories (`view_categories`), Products (`view_products`) |
+| `app-sidebar.tsx` | Full sidebar with nav, user menu; nav items filtered by `auth.can[permission]`; currently: Dashboard (no gate), Shop (no gate — all authenticated users), Users (`view_users`), Roles (`admin`), Categories (`view_categories`), Products (`view_products`) |
 | `app-header.tsx` | Top bar |
 | `app-content.tsx` | Main content area wrapper |
 | `breadcrumbs.tsx` | Breadcrumb trail |
@@ -164,16 +172,28 @@ All index pages pass a pre-configured TanStack `table` instance into `DataTable`
 
 ### `auth.ts` — Core domain types
 ```ts
-type Role = 'site_admin' | 'admin' | 'manager' | 'user';
+type Tier = 'site_admin' | 'admin' | 'user';
 
-const PRIVILEGED_ROLES: Role[] = ['site_admin', 'admin'];  // import from @/types, never redefine locally
+const PRIVILEGED_TIERS: Tier[] = ['site_admin', 'admin'];  // import from @/types, never redefine locally
 
 type Permission = { id, name, display_name, description, created_at, updated_at };
 
+type Role = {   // RBAC role (admin-managed bundle of permissions)
+    id: number;
+    name: string;
+    description: string | null;
+    permissions?: Permission[];
+    users_count?: number;
+    created_at: string;
+    updated_at: string;
+};
+
 type User = {
     id, first_name, last_name, full_name, email,
-    role: Role, avatar?, email_verified_at,
-    two_factor_enabled?, permissions?: Permission[],
+    role: Tier,  // coarse access tier
+    avatar?, email_verified_at,
+    two_factor_enabled?,
+    roles?: Role[],  // RBAC roles assigned via role_user pivot
     deleted_at: string | null,
     created_at, updated_at
 };
@@ -252,7 +272,7 @@ Import for displaying billing intervals in subscription-related UI (product show
 `Can` is shared from the server via `HandleInertiaRequests` middleware and reflects which gates pass for the authenticated user. Auto-derived from `Permission::all()` — no manual list to maintain.
 
 ### Server-side authorization props (show pages)
-Per-model authorization decisions (can this viewer edit/delete THIS specific user?) are computed on the server and passed as Inertia props — never re-derived on the client. The `users/show` page receives `canEdit`, `canDelete`, `canManagePermissions` as boolean props. The `Can` type in `auth` only covers global capabilities (can the user edit users at all), not per-record ones.
+Per-model authorization decisions (can this viewer edit/delete THIS specific user?) are computed on the server and passed as Inertia props — never re-derived on the client. The `users/show` page receives `canEdit` and `canDelete` as boolean props. The `Can` type in `auth` only covers global capabilities (can the user edit users at all), not per-record ones.
 
 ---
 
@@ -444,6 +464,17 @@ import { edit as editCategory, update as updateCategory, destroy as destroyCateg
 editCategory(category).url          // GET /admin/categories/{id}/edit  (string property)
 updateCategory(category).url        // PATCH /admin/categories/{id}      (string property)
 destroyCategory(category).url       // DELETE /admin/categories/{id}     (string property)
+
+import { roles as adminRolesRoute } from '@/routes/admin';
+import { create as rolesCreateRoute } from '@/routes/admin/roles';
+import { store as storeRole, edit as editRole, update as updateRole, destroy as destroyRole } from '@/actions/App/Http/Controllers/RoleController';
+
+adminRolesRoute.url()               // GET /admin/roles        (no-arg, method on function)
+rolesCreateRoute.url()              // GET /admin/roles/create  (no-arg, method on function)
+storeRole.url()                     // POST /admin/roles        (no-arg, method on function)
+editRole(role).url                  // GET /admin/roles/{id}/edit  (string property)
+updateRole(role).url                // PATCH /admin/roles/{id}     (string property)
+destroyRole(role).url               // DELETE /admin/roles/{id}    (string property)
 ```
 
 Destructuring sub-routes (`show`, `edit`, `create`) directly from `@/routes/admin` yields `undefined` — always access them as properties on the parent route function.

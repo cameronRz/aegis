@@ -37,7 +37,13 @@ GET    /admin/users/{user}/edit                             → admin.users.edit
 PATCH  /admin/users/{user}                                 → admin.users.update                   (can:edit_user)
 DELETE /admin/users/{user}                                 → admin.users.destroy                  (can:delete_user)
 GET    /admin/users/{user}                                 → admin.users.show                     (can:view_users)
-POST  /admin/users/{user}/permissions/{permission}/toggle  → admin.users.permissions.toggle       (can:admin)
+
+GET    /admin/roles                                        → admin.roles                          (can:admin)
+GET    /admin/roles/create                                 → admin.roles.create                   (can:admin)
+POST   /admin/roles                                        → admin.roles.store                    (can:admin)
+GET    /admin/roles/{role}/edit                            → admin.roles.edit                     (can:admin)
+PATCH  /admin/roles/{role}                                 → admin.roles.update                   (can:admin)
+DELETE /admin/roles/{role}                                 → admin.roles.destroy                  (can:admin)
 
 GET   /admin/categories                                    → admin.categories                     (can:view_categories)
 GET   /admin/categories/create                             → admin.categories.create              (can:create_category)
@@ -59,7 +65,9 @@ GET   /admin/products/{product}                            → admin.products.sh
 
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 
-**Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories and products: `products/create` and `products/trash` are declared before `products/{product}`, and `products/{product}/edit` before `products/{product}` (show). Always declare literal-segment routes before parametric routes at the same depth.
+**Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories, products, and roles: `roles/create` is declared before `roles/{role}/edit`. Always declare literal-segment routes before parametric routes at the same depth.
+
+**Removed:** `permission-sets` routes replaced by `roles` routes (RBAC migration). Individual per-user permission grants are gone; permissions are now bundled into `Role`s and assigned many-to-many.
 ```
 
 ## `routes/settings.php`
@@ -90,7 +98,7 @@ import { trash } from '@/routes/admin/products';
 trash.url();
 ```
 
-Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
+Sub-module paths mirror the route structure: `@/routes/admin/products`, `@/routes/admin/categories`, `@/routes/admin/users`, `@/routes/admin/roles`. Keep the named import from `@/routes/admin` for the index route (`.url()`), and import any sub-routes separately.
 
 The same pattern applies to shop routes:
 ```ts

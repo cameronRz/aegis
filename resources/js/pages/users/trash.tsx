@@ -12,13 +12,13 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
-import { RoleBadge } from '@/components/role-badge';
+import { TierBadge } from '@/components/tier-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 import { users as adminUsersRoute } from '@/routes/admin';
 import { trash as usersTrashRoute } from '@/routes/admin/users';
-import type { PaginatedData, Role, User } from '@/types';
+import type { PaginatedData, Tier, User } from '@/types';
 
 type Props = {
     users: PaginatedData<User>;
@@ -48,9 +48,9 @@ export default function UsersTrash({ users, filters }: Props) {
             columnHelper.accessor('first_name', { header: 'First Name' }),
             columnHelper.accessor('last_name', { header: 'Last Name' }),
             columnHelper.accessor('email', { header: 'Email' }),
-            columnHelper.accessor('role', {
-                header: 'Role',
-                cell: ({ getValue }) => <RoleBadge role={getValue() as Role} />,
+            columnHelper.accessor('tier', {
+                header: 'Tier',
+                cell: ({ getValue }) => <TierBadge tier={getValue() as Tier} />,
             }),
             columnHelper.display({
                 id: 'deleted_at',

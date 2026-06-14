@@ -44,7 +44,6 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'can' => $request->user()
                     ? Permission::all()
-                        ->tap(fn () => $request->user()->loadMissing('permissions'))
                         ->mapWithKeys(fn (Permission $permission) => [
                             $permission->name => Gate::allows($permission->name),
                         ])

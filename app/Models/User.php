@@ -4,7 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enum\PermissionName;
-use App\Enum\Role;
+use App\Enum\Tier;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -48,15 +48,13 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
-            'role' => Role::class,
+            'tier' => Tier::class,
         ];
     }
 
     public function scopeVisibleTo(Builder $query, User $viewer): void
     {
-        $query
-            ->when($viewer->role !== Role::SiteAdmin, fn ($q) => $q->where('role', '!=', Role::SiteAdmin->value))
-            ->when($viewer->role === Role::Manager, fn ($q) => $q->where('role', '!=', Role::Admin->value));
+        $query->when($viewer->tier !== Tier::SiteAdmin, fn ($q) => $q->where('tier', '!=', Tier::SiteAdmin->value));
     }
 
     public function scopeSearch(Builder $query, ?string $search): void
@@ -70,29 +68,29 @@ class User extends Authenticatable implements PasskeyUser
         });
     }
 
-    public function permissions(): BelongsToMany
+    public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'user_permissions')
-            ->withPivot('granted_by')
+        return $this->belongsToMany(Role::class, 'role_user')
+            ->withPivot('assigned_by')
             ->withTimestamps();
     }
 
     public function isAdmin(): bool
     {
-        return in_array($this->role, [Role::SiteAdmin, Role::Admin], true);
+        return in_array($this->tier, [Tier::SiteAdmin, Tier::Admin], true);
     }
 
     /**
-     * Returns the Role cases this user is allowed to assign to other users.
-     * Site admins can assign any role; everyone else is restricted to manager and below.
+     * Returns the Tier cases this user is allowed to assign to other users.
+     * Site admins can assign any tier; everyone else is restricted to user and below.
      *
-     * @return Role[]
+     * @return Tier[]
      */
-    public function assignableRoles(): array
+    public function assignableTiers(): array
     {
-        return $this->role === Role::SiteAdmin
-            ? Role::cases()
-            : [Role::Manager, Role::User];
+        return $this->tier === Tier::SiteAdmin
+            ? Tier::cases()
+            : [Tier::User];
     }
 
     public function hasPermission(PermissionName $permission): bool
@@ -101,7 +99,11 @@ class User extends Authenticatable implements PasskeyUser
             return true;
         }
 
-        return $this->loadMissing('permissions')->permissions->pluck('name')->contains($permission->value);
+        return $this->loadMissing('roles.permissions')
+            ->roles
+            ->flatMap->permissions
+            ->pluck('name')
+            ->contains($permission->value);
     }
 
     protected function fullName(): Attribute

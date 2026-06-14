@@ -1,5 +1,5 @@
 import InputError from '@/components/input-error';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,23 +10,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Permission, Role } from '@/types';
-import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
+import type { Role, Tier } from '@/types';
 
 export type UserFormData = {
     first_name: string;
     last_name: string;
     email: string;
-    role: Role;
-    permissions: number[];
+    tier: Tier;
+    role_ids: number[];
 };
 
-const roleLabels: Record<Role, string> = {
+const tierLabels: Record<Tier, string> = {
     site_admin: 'Site Admin',
     admin: 'Admin',
-    manager: 'Manager',
     user: 'User',
 };
 
@@ -34,36 +30,21 @@ type Props = {
     data: UserFormData;
     setData: <K extends keyof UserFormData>(key: K, value: UserFormData[K]) => void;
     errors: Partial<Record<keyof UserFormData, string>>;
-    availableRoles: Role[];
-    allPermissions: Permission[];
-    canAssignPermissions: boolean;
-    permissionsDescription?: string;
+    availableTiers: Tier[];
+    roles: Role[];
 };
 
-export function UserFormFields({
-    data,
-    setData,
-    errors,
-    availableRoles,
-    allPermissions,
-    canAssignPermissions,
-    permissionsDescription = 'Assign or revoke permissions for this user.',
-}: Props) {
-    const grantedIds = new Set(data.permissions);
+function toggleId(ids: number[], id: number): number[] {
+    return ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+}
 
-    function togglePermission(id: number) {
-        const permission = allPermissions.find((p) => p.id === id)!;
-        const { toGrant, toRevoke } = resolveToggle(
-            permission,
-            grantedIds.has(id),
-            allPermissions,
-            grantedIds,
-        );
-        const updated = data.permissions
-            .filter((p) => !toRevoke.some((r) => r.id === p))
-            .concat(toGrant.map((p) => p.id));
-        setData('permissions', updated);
-    }
+export function UserFormFields({ data, setData, errors, availableTiers, roles }: Props) {
+    const selectedRoles = roles.filter((r) => data.role_ids.includes(r.id));
+    const combinedPermissions = [
+        ...new Set(
+            selectedRoles.flatMap((r) => r.permissions?.map((p) => p.display_name) ?? []),
+        ),
+    ];
 
     return (
         <>
@@ -117,77 +98,66 @@ export function UserFormFields({
                         <InputError message={errors.email} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="role">Role</Label>
-                        <Select
-                            value={data.role}
-                            onValueChange={(value) => setData('role', value as Role)}
-                        >
-                            <SelectTrigger id="role" className="w-48">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableRoles.map((role) => (
-                                    <SelectItem key={role} value={role}>
-                                        {roleLabels[role]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.role} />
-                    </div>
+                    {availableTiers.length > 1 && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="tier">Access tier</Label>
+                            <Select
+                                value={data.tier}
+                                onValueChange={(value) => setData('tier', value as Tier)}
+                            >
+                                <SelectTrigger id="tier" className="w-48">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableTiers.map((tier) => (
+                                        <SelectItem key={tier} value={tier}>
+                                            {tierLabels[tier]}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.tier} />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
-            {canAssignPermissions && (
-                <Card className="max-w-lg">
-                    <CardHeader>
-                        <CardTitle>Permissions</CardTitle>
-                        <CardDescription>{permissionsDescription}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {PRIVILEGED_ROLES.includes(data.role) ? (
-                            <p className="text-sm text-muted-foreground">
-                                Site admins and admins have all permissions by default.
-                                Individual permissions are not applicable.
-                            </p>
-                        ) : allPermissions.length > 0 ? (
-                            <div className="flex flex-col">
-                                {allPermissions.map((permission, index) => (
-                                    <div key={permission.id}>
-                                        {index > 0 && <Separator className="my-4" />}
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex flex-col gap-1">
-                                                <Label
-                                                    htmlFor={`permission-${permission.id}`}
-                                                    className="font-medium"
-                                                >
-                                                    {permission.display_name}
-                                                </Label>
-                                                {permission.description && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {permission.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <Checkbox
-                                                id={`permission-${permission.id}`}
-                                                checked={data.permissions.includes(permission.id)}
-                                                disabled={isPermissionDisabled(permission, allPermissions, grantedIds)}
-                                                onCheckedChange={() => togglePermission(permission.id)}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">
-                                No permissions have been defined yet.
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
-            )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Roles</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {roles.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No roles defined yet.</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {roles.map((r) => (
+                                <div key={r.id} className="flex items-center gap-3">
+                                    <Checkbox
+                                        id={`role-${r.id}`}
+                                        checked={data.role_ids.includes(r.id)}
+                                        onCheckedChange={() =>
+                                            setData('role_ids', toggleId(data.role_ids, r.id))
+                                        }
+                                    />
+                                    <Label
+                                        htmlFor={`role-${r.id}`}
+                                        className="cursor-pointer font-normal"
+                                    >
+                                        {r.name}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {combinedPermissions.length > 0 && (
+                        <p className="text-muted-foreground text-xs">
+                            Grants: {combinedPermissions.join(', ')}
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
         </>
     );
 }

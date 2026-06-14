@@ -1,9 +1,10 @@
 <?php
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Category;
 use App\Models\Permission;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\UploadedFile;
@@ -26,7 +27,7 @@ beforeEach(function () {
         $mock->allows('archiveProduct');
     });
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
     $this->viewPermission = Permission::create([
         'name' => 'view_products',
         'display_name' => 'View Products',
@@ -42,7 +43,7 @@ it('redirects guests from the show page', function () {
 });
 
 it('forbids users without view_products from the show page', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get("/admin/products/{$this->product->id}")->assertForbidden();
 });
@@ -60,8 +61,10 @@ it('renders the show page for an admin', function () {
 });
 
 it('renders the show page for a user with view_products permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->viewPermission->id, ['granted_by' => $this->admin->id]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->viewPermission->id]);
+    $user->roles()->attach($role->id, ['assigned_by' => $this->admin->id]);
 
     actingAs($user)
         ->get("/admin/products/{$this->product->id}")
@@ -105,7 +108,7 @@ it('redirects guests from destroy', function () {
 });
 
 it('forbids users without delete_product from destroying', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->delete("/admin/products/{$this->product->id}")->assertForbidden();
 });

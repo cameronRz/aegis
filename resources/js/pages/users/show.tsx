@@ -1,62 +1,22 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { destroy as destroyUser, edit as editUser } from '@/actions/App/Http/Controllers/UserController';
-import { toggle as togglePermission } from '@/actions/App/Http/Controllers/UserPermissionController';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { RoleBadge } from '@/components/role-badge';
+import { TierBadge } from '@/components/tier-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { users as adminUsersRoute } from '@/routes/admin';
-import { PRIVILEGED_ROLES } from '@/types';
-import type { Permission, User } from '@/types';
-import { isPermissionDisabled, resolveToggle } from './permission-dependencies';
+import type { User } from '@/types';
 
 type Props = {
-    user: User & { permissions: Permission[] };
-    allPermissions: Permission[];
+    user: User;
     canEdit: boolean;
     canDelete: boolean;
-    canManagePermissions: boolean;
 };
 
-export default function UserShow({ user, allPermissions, canEdit, canDelete, canManagePermissions }: Props) {
+export default function UserShow({ user, canEdit, canDelete }: Props) {
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
-
-    const grantedIds = new Set(user.permissions.map((p) => p.id));
-    const isPrivileged = PRIVILEGED_ROLES.includes(user.role);
-
-    function fireToggle(permission: Permission, onSuccess?: () => void) {
-        router.post(
-            togglePermission({ user: user.id, permission: permission.id }).url,
-            {},
-            { preserveScroll: true, onSuccess },
-        );
-    }
-
-    function handleToggle(permission: Permission) {
-        const { toGrant, toRevoke } = resolveToggle(
-            permission,
-            grantedIds.has(permission.id),
-            allPermissions,
-            grantedIds,
-        );
-        const sequence = [...toRevoke, ...toGrant];
-        const fire = (index: number) => {
-            if (index >= sequence.length) {
-                toast('Permission updated');
-
-                return;
-            }
-
-            fireToggle(sequence[index], () => fire(index + 1));
-        };
-        fire(0);
-    }
 
     function handleDelete() {
         setDeleting(true);
@@ -65,6 +25,8 @@ export default function UserShow({ user, allPermissions, canEdit, canDelete, can
             onFinish: () => setDeleting(false),
         });
     }
+
+    const assignedRoles = user.roles ?? [];
 
     return (
         <>
@@ -78,7 +40,7 @@ export default function UserShow({ user, allPermissions, canEdit, canDelete, can
                                 <CardDescription>{user.email}</CardDescription>
                             </div>
                             <div className="flex items-center gap-3">
-                                <RoleBadge role={user.role} />
+                                <TierBadge tier={user.tier} />
                                 {canEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={editUser(user).url}>Edit</Link>
@@ -101,55 +63,24 @@ export default function UserShow({ user, allPermissions, canEdit, canDelete, can
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Permissions</CardTitle>
-                        <CardDescription>
-                            {isPrivileged
-                                ? 'Admins and site admins have all permissions by default.'
-                                : canManagePermissions
-                                  ? 'Toggle permissions for this user. Changes apply immediately.'
-                                  : 'You can view but not change permissions for this user.'}
-                        </CardDescription>
+                        <CardTitle>Roles</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {isPrivileged ? (
-                            <p className="text-sm text-muted-foreground">
-                                This user's role grants full access. Individual permission toggles are not
-                                applicable.
-                            </p>
-                        ) : (
-                            <div className="flex flex-col">
-                                {allPermissions.map((permission, index) => (
-                                    <div key={permission.id}>
-                                        {index > 0 && <Separator className="my-4" />}
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex flex-col gap-1">
-                                                <Label
-                                                    htmlFor={`permission-${permission.id}`}
-                                                    className="font-medium"
-                                                >
-                                                    {permission.display_name}
-                                                </Label>
-                                                {permission.description && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {permission.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <Checkbox
-                                                id={`permission-${permission.id}`}
-                                                checked={grantedIds.has(permission.id)}
-                                                disabled={!canManagePermissions || isPermissionDisabled(permission, allPermissions, grantedIds)}
-                                                onCheckedChange={() => handleToggle(permission)}
-                                            />
-                                        </div>
+                        {assignedRoles.length > 0 ? (
+                            <div className="flex flex-col gap-3">
+                                {assignedRoles.map((r) => (
+                                    <div key={r.id} className="flex flex-col gap-1">
+                                        <span className="font-medium">{r.name}</span>
+                                        {r.permissions?.length ? (
+                                            <span className="text-muted-foreground text-sm">
+                                                {r.permissions.map((p) => p.display_name).join(', ')}
+                                            </span>
+                                        ) : null}
                                     </div>
                                 ))}
-                                {allPermissions.length === 0 && (
-                                    <p className="text-sm text-muted-foreground">
-                                        No permissions have been defined yet.
-                                    </p>
-                                )}
                             </div>
+                        ) : (
+                            <p className="text-muted-foreground text-sm">No roles assigned.</p>
                         )}
                     </CardContent>
                 </Card>

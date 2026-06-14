@@ -3,10 +3,11 @@
 use App\Enum\BillingInterval;
 use App\Enum\PriceType;
 use App\Enum\ProductType;
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\Category;
 use App\Models\Permission;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\UploadedFile;
@@ -27,7 +28,7 @@ beforeEach(function () {
         $mock->allows('createPrice')->andReturn(Price::constructFrom(['id' => 'price_test123']));
     });
 
-    $this->admin = User::factory()->create(['role' => Role::Admin]);
+    $this->admin = User::factory()->create(['tier' => Tier::Admin]);
     $this->createPermission = Permission::create([
         'name' => 'create_product',
         'display_name' => 'Create Product',
@@ -62,7 +63,7 @@ it('redirects guests from create page', function () {
 });
 
 it('forbids users without create_product from the create page', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->get('/admin/products/create')->assertForbidden();
 });
@@ -74,8 +75,10 @@ it('renders the create page for an admin', function () {
 });
 
 it('renders the create page for a user with create_product permission', function () {
-    $user = User::factory()->create(['role' => Role::User]);
-    $user->permissions()->attach($this->createPermission->id, ['granted_by' => $this->admin->id]);
+    $user = User::factory()->create(['tier' => Tier::User]);
+    $role = Role::create(['name' => 'Staff']);
+    $role->permissions()->sync([$this->createPermission->id]);
+    $user->roles()->attach($role->id, ['assigned_by' => $this->admin->id]);
 
     actingAs($user)
         ->get('/admin/products/create')
@@ -85,7 +88,7 @@ it('renders the create page for a user with create_product permission', function
 // --- store ---
 
 it('forbids users without create_product from storing', function () {
-    $user = User::factory()->create(['role' => Role::User]);
+    $user = User::factory()->create(['tier' => Tier::User]);
 
     actingAs($user)->post('/admin/products', validProductPayload())->assertForbidden();
 });

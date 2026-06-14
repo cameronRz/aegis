@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 
 class UserPolicy
@@ -13,7 +13,7 @@ class UserPolicy
             return false;
         }
 
-        if ($viewer->role === Role::SiteAdmin) {
+        if ($viewer->tier === Tier::SiteAdmin) {
             return true;
         }
 
@@ -26,23 +26,10 @@ class UserPolicy
             return false;
         }
 
-        if ($viewer->role === Role::SiteAdmin) {
+        if ($viewer->tier === Tier::SiteAdmin) {
             return true;
         }
 
         return ! $target->isAdmin();
-    }
-
-    public function managePermissions(User $viewer, User $target): bool
-    {
-        if ($viewer->id === $target->id) {
-            return false;
-        }
-
-        if ($viewer->role === Role::SiteAdmin) {
-            return true;
-        }
-
-        return $viewer->role === Role::Admin && ! $target->isAdmin();
     }
 }

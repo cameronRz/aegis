@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
-use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\RedirectResponse;
@@ -74,16 +74,13 @@ class UserController extends Controller
         $viewer = $request->user();
 
         return Inertia::render('users/create', [
-            'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
-            'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
-            'canAssignPermissions' => $viewer->isAdmin(),
+            'availableTiers' => array_column($viewer->assignableTiers(), 'value'),
+            'roles' => Role::orderBy('name')->with('permissions')->get(['id', 'name']),
         ]);
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $viewer = $request->user();
-
         $user = User::create([
             'first_name' => $request->validated('first_name'),
             'last_name' => $request->validated('last_name'),
@@ -91,7 +88,7 @@ class UserController extends Controller
             'password' => Str::random(64),
         ]);
 
-        $user->role = Role::from($request->validated('role'));
+        $user->tier = Tier::from($request->validated('tier'));
         $user->email_verified_at = now();
 
         try {
@@ -106,12 +103,10 @@ class UserController extends Controller
 
         $user->save();
 
-        if ($viewer->isAdmin() && $request->filled('permissions')) {
-            $pivot = collect($request->validated('permissions'))
-                ->mapWithKeys(fn (int $id) => [$id => ['granted_by' => $viewer->id]]);
-
-            $user->permissions()->attach($pivot);
-        }
+        $user->roles()->syncWithPivotValues(
+            $request->validated('role_ids', []),
+            ['assigned_by' => $request->user()->id]
+        );
 
         Password::broker()->sendResetLink(['email' => $user->email]);
 
@@ -122,15 +117,14 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $user->load('permissions');
-
         $viewer = $request->user();
+        $user->loadMissing('roles');
 
         return Inertia::render('users/edit', [
             'user' => $user,
-            'availableRoles' => array_column($viewer->assignableRoles(), 'value'),
-            'allPermissions' => $viewer->isAdmin() ? Permission::all() : [],
-            'canAssignPermissions' => $viewer->isAdmin(),
+            'availableTiers' => array_column($viewer->assignableTiers(), 'value'),
+            'roles' => Role::orderBy('name')->with('permissions')->get(['id', 'name']),
+            'selectedRoleIds' => $user->roles->pluck('id')->toArray(),
         ]);
     }
 
@@ -138,26 +132,16 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $viewer = $request->user();
-
         $user->first_name = $request->validated('first_name');
         $user->last_name = $request->validated('last_name');
         $user->email = $request->validated('email');
-        $user->role = Role::from($request->validated('role'));
+        $user->tier = Tier::from($request->validated('tier'));
         $user->save();
 
-        if ($viewer->isAdmin()) {
-            $user->load('permissions');
-
-            $existingGrantedBy = $user->permissions->keyBy('id')->map(fn ($p) => $p->pivot->granted_by);
-
-            $pivot = collect($request->validated('permissions', []))
-                ->mapWithKeys(fn (int $id) => [
-                    $id => ['granted_by' => $existingGrantedBy->get($id, $viewer->id)],
-                ]);
-
-            $user->permissions()->sync($pivot);
-        }
+        $user->roles()->syncWithPivotValues(
+            $request->validated('role_ids', []),
+            ['assigned_by' => $request->user()->id]
+        );
 
         return redirect()->route('admin.users.show', $user);
     }
@@ -173,16 +157,14 @@ class UserController extends Controller
 
     public function show(Request $request, User $user): Response
     {
-        $user->load('permissions');
+        $user->load('roles.permissions');
 
         $viewer = $request->user();
 
         return Inertia::render('users/show', [
             'user' => $user,
-            'allPermissions' => Permission::all(),
             'canEdit' => Gate::allows('edit_user') && $viewer->can('update', $user),
             'canDelete' => Gate::allows('delete_user') && $viewer->can('delete', $user),
-            'canManagePermissions' => $viewer->can('managePermissions', $user),
         ]);
     }
 }

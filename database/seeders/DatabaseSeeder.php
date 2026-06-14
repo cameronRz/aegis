@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enum\Role;
+use App\Enum\Tier;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Database\Seeder;
@@ -10,7 +10,6 @@ use Stripe\Exception\ApiErrorException;
 
 class DatabaseSeeder extends Seeder
 {
-
     /**
      * Seed the application's database.
      */
@@ -25,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'email' => config('admin.site_admin.email'),
             'password' => bcrypt(config('admin.site_admin.password')),
         ]);
-        $siteAdmin->role = Role::SiteAdmin;
+        $siteAdmin->tier = Tier::SiteAdmin;
         $siteAdmin->save();
         $this->createStripeCustomer($stripe, $siteAdmin);
 
@@ -35,18 +34,9 @@ class DatabaseSeeder extends Seeder
             'last_name' => 'Mena',
             'email' => 'dora@email.com',
         ]);
-        $admin->role = Role::Admin;
+        $admin->tier = Tier::Admin;
         $admin->save();
         $this->createStripeCustomer($stripe, $admin);
-
-        $manager = User::factory()->create([
-            'first_name' => 'Jack',
-            'last_name' => 'Penny',
-            'email' => 'jack@email.com',
-        ]);
-        $manager->role = Role::Manager;
-        $manager->save();
-        $this->createStripeCustomer($stripe, $manager);
 
         $benny = User::factory()->create([
             'first_name' => 'Benny',
@@ -55,9 +45,8 @@ class DatabaseSeeder extends Seeder
         ]);
         $this->createStripeCustomer($stripe, $benny);
 
-        User::factory(5)->create(['role' => Role::Admin]);
-        User::factory(20)->create(['role' => Role::Manager]);
-        User::factory(100)->create();
+        User::factory(5)->create(['tier' => Tier::Admin]);
+        User::factory(120)->create();
 
         // Permissions
         $this->call(PermissionSeeder::class);

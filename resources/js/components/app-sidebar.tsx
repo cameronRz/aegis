@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, Package, ShieldCheck, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,6 +16,7 @@ import {
 import { cart as cartRoute, dashboard, shop as shopRoute } from '@/routes';
 import {
     categories as adminCategoriesRoute,
+    roles as adminRolesRoute,
     products as adminProductsRoute,
     users as adminUsersRoute,
 } from '@/routes/admin';
@@ -72,6 +73,12 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             href: adminProductsRoute.url(),
             icon: Package,
             permission: 'view_products',
+        },
+        {
+            title: 'Roles',
+            href: adminRolesRoute.url(),
+            icon: ShieldCheck,
+            permission: 'admin',
         },
     ];
 }

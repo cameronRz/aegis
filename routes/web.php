@@ -4,9 +4,9 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\UserPermissionController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -66,9 +66,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         });
 
-        Route::post('users/{user}/permissions/{permission}/toggle', [UserPermissionController::class, 'toggle'])
-            ->middleware('can:admin')
-            ->name('users.permissions.toggle');
+        // Roles — literal /create before parametric /{role}
+        Route::middleware('can:admin')->group(function () {
+            Route::get('roles', [RoleController::class, 'index'])->name('roles');
+            Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::patch('roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
 
         Route::middleware('can:view_categories')->group(function () {
             Route::get('categories', [CategoryController::class, 'index'])->name('categories');
