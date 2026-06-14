@@ -52,6 +52,11 @@ The app runs in Docker via Laravel Sail. All commands must be prefixed with `./v
 
 **pgvector** — the PostgreSQL image is `pgvector/pgvector:pg18`, which bundles the `vector` extension for future RAG/semantic search. The extension is enabled via `0001_01_01_000003_enable_pgvector_extension.php`, which runs before all application table migrations so any future table can add a `vector` column.
 
+**Storage symlink** — `public/storage` must be a **relative** symlink (`../storage/app/public`). Never run `php artisan storage:link` directly on the host — it writes an absolute macOS path that the Sail container cannot resolve, causing 403s on all uploaded files. If the symlink is broken, fix it with:
+```bash
+rm public/storage && ln -s ../storage/app/public public/storage
+```
+
 **Reseeding and Stripe test data** — every `migrate:fresh --seed` creates new Stripe objects (customers, products, prices) without deleting the old ones. There is no meaningful rate limit concern (154 API calls per reseed is well under Stripe's 100 req/sec limit). The real consequence is **accumulating orphaned test objects** in the Stripe sandbox — old products, prices, and customers that the app no longer knows about. A few reseeds a day is fine; clean up the Stripe test dashboard periodically if it gets cluttered.
 
 ---
