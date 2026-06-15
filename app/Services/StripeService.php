@@ -108,6 +108,14 @@ class StripeService
     /**
      * @throws ApiErrorException
      */
+    public function retrieveSubscription(string $subscriptionId): Subscription
+    {
+        return $this->client->subscriptions->retrieve($subscriptionId);
+    }
+
+    /**
+     * @throws ApiErrorException
+     */
     public function cancelSubscription(string $stripeSubscriptionId, bool $atPeriodEnd = true): Subscription
     {
         return $this->client->subscriptions->update($stripeSubscriptionId, [

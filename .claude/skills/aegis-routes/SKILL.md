@@ -14,6 +14,8 @@ metadata:
 GET  /                          → welcome                              (public)
 GET  /dashboard                 → dashboard                            (auth + verified)
 
+POST /webhooks/stripe           → webhooks.stripe                      (public — Stripe signature verified internally, CSRF excluded)
+
 GET  /shop                      → shop                                 (auth + verified)
 GET  /shop/{product}            → shop.show                            (auth + verified) — 404 if product inactive or soft-deleted
 

@@ -345,6 +345,7 @@ Bound as a singleton in `AppServiceProvider::register()` with a pinned API versi
 | `updateProduct(string $stripeProductId, array)` | `StripeProduct` | Updates name/description on the Stripe product |
 | `createCheckoutSession(array)` | `CheckoutSession` | Passes raw params; built by `CheckoutController` |
 | `retrieveCheckoutSession(string $sessionId)` | `CheckoutSession` | |
+| `retrieveSubscription(string $subscriptionId)` | `Subscription` | Fetches a Stripe subscription by ID; used by `WebhookController` to get full subscription details after `checkout.session.completed` |
 | `cancelSubscription(string $id, bool $atPeriodEnd=true)` | `Subscription` | Sets `cancel_at_period_end` |
 | `createBillingPortalSession(string $customerId, string $returnUrl)` | `BillingPortalSession` | |
 | `constructEvent(string $payload, string $signature)` | `Event` | Verifies webhook signature using `STRIPE_WEBHOOK_SECRET` |
@@ -390,6 +391,7 @@ Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver
 | `cart_items` | Line items in a cart: `cart_id`, `product_id`, `quantity`; unique(`cart_id`, `product_id`) |
 | `orders` | Purchase records: `order_number` (auto-generated `ORD-000001` in `created` event), `user_id` (nullable, nullOnDelete), `status` (`OrderStatus` enum), `subtotal`/`total` (cents), `stripe_checkout_session_id`, `stripe_payment_intent_id` |
 | `order_items` | Snapshot line items per order: `order_id` (cascadeDelete), `product_id` (nullable, nullOnDelete), `product_name`, `product_sku`, `product_type`, `price` (cents), `quantity` |
+| `subscriptions` | Active/historical subscription records: `user_id` (cascadeDelete), `order_id` (nullable, nullOnDelete), `product_id` (nullable, nullOnDelete), `product_name` (snapshot), `stripe_subscription_id` (unique, index), `stripe_price_id`, `status` (string matching Stripe values), `quantity`, `trial_ends_at`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at` |
 | `stripe.log` | Dedicated daily log channel (`storage/logs/stripe-YYYY-MM-DD.log`) for all Stripe errors; 14-day rotation |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |
