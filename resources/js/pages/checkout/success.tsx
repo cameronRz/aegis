@@ -5,27 +5,17 @@ import { CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
-import type { Order, OrderStatus } from '@/types';
+import type { Order } from '@/types';
 
 type Props = {
     order: Order;
 };
 
-const statusConfig: Record<
-    OrderStatus,
-    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-    pending: { label: 'Processing', variant: 'secondary' },
-    paid: { label: 'Paid', variant: 'default' },
-    failed: { label: 'Failed', variant: 'destructive' },
-    refunded: { label: 'Refunded', variant: 'outline' },
-    expired: { label: 'Expired', variant: 'outline' },
-};
-
 export default function CheckoutSuccess({ order }: Props) {
     const isPending = order.status === 'pending';
-    const { label, variant } = statusConfig[order.status];
+    const { label, variant } = orderStatusConfig[order.status];
 
     // Poll every 3 s while the webhook hasn't arrived yet; stop once the status resolves.
     const { stop } = usePoll(3000, { only: ['order'] });
