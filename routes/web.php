@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +28,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
     Route::get('checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
     Route::post('checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+    // Orders — literal /orders declared before parametric /orders/{order}
+    Route::get('orders', [OrderController::class, 'index'])->name('orders');
+    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+    // Subscriptions
+    Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions');
+    Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+
+    // Billing portal
+    Route::post('billing/portal', [BillingPortalController::class, 'redirect'])->name('billing.portal');
 
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');

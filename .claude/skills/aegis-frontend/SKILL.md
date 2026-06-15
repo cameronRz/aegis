@@ -59,6 +59,23 @@ metadata:
 |---|---|
 | `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button POSTs to `checkout.store` via Wayfinder; shows "Redirecting…" while processing; surfaces `errors.checkout` below the button. Empty state shows link back to Shop. |
 
+#### `orders/` (client-facing)
+| File | Description |
+|---|---|
+| `orders/index.tsx` | Paginated order history table using `DataTable` + `DataTablePagination`. Columns: order number (`font-mono`), date, status `Badge`, item count, total (`tabular-nums`). Row click navigates to `orders/show.tsx`. Status badge config: `pending` → secondary, `paid` → default, `failed` → destructive, `refunded`/`expired` → outline. Receives `orders: PaginatedData<Order & { items_count: number }>`. |
+| `orders/show.tsx` | Order detail page. Header: order number in `font-mono`, status badge, date. Line items rendered as a `<table>` with columns: Item (name + SKU), Type, Unit price, Qty, Total. Footer row shows order total. If any item is `product_type === 'subscription'`, shows a link to `/subscriptions`. Back button to orders index. |
+
+#### `subscriptions/` (client-facing)
+| File | Description |
+|---|---|
+| `subscriptions/index.tsx` | Subscription management page. Active and past subscriptions split at render time (active: `status !== 'canceled'`; past: `status === 'canceled'`). Each subscription is a `SubscriptionCard` sub-component. Shows: product name, billing label (from `product.billing_interval` + `billing_interval_count`), status badge, renewal/cancellation/trial dates. "Cancel subscription" subtle button opens `ConfirmDialog` → POSTs to `subscriptions.cancel`. `cancel_at_period_end = true` replaces the cancel button with a "Cancels on [date]" `Badge`. "Manage billing" button POSTs to `billing.portal` and shows "Redirecting…" while loading. Empty state shown when no subscriptions exist. Receives `subscriptions: Subscription[]`. |
+
+**`statusConfig` for `SubscriptionStatus`:** `active` → default, `trialing` → secondary, `past_due`/`unpaid` → destructive, `canceled`/`incomplete_expired`/`paused` → outline, `incomplete` → secondary.
+
+**Sidebar additions (Phase 6):** Orders (`Receipt` icon, `ordersRoute.url()`) and Subscriptions (`RefreshCcw` icon, `subscriptionsRoute.url()`) added to `ALL_NAV_ITEMS` between Cart and Users. No permission gate — visible to all authenticated users. Imported from `@/routes` as `orders as ordersRoute` and `subscriptions as subscriptionsRoute`.
+
+**`SubscriptionStatus` + `Subscription` types** added to `resources/js/types/auth.ts` in Phase 6. See the types file for the full shape.
+
 #### `checkout/` (client-facing)
 | File | Description |
 |---|---|

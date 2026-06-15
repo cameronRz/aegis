@@ -125,8 +125,14 @@ class WebhookController extends Controller
             'status' => $stripeSub->status,
             'quantity' => $stripeSub->items->data[0]->quantity ?? 1,
             'trial_ends_at' => $stripeSub->trial_end ? Carbon::createFromTimestamp($stripeSub->trial_end) : null,
-            'current_period_start' => Carbon::createFromTimestamp($stripeSub->current_period_start),
-            'current_period_end' => Carbon::createFromTimestamp($stripeSub->current_period_end),
+            // period dates may be null on trial subscriptions at creation time;
+            // customer.subscription.updated fires immediately after and corrects them.
+            'current_period_start' => $stripeSub->current_period_start
+                ? Carbon::createFromTimestamp($stripeSub->current_period_start)
+                : now(),
+            'current_period_end' => $stripeSub->current_period_end
+                ? Carbon::createFromTimestamp($stripeSub->current_period_end)
+                : ($stripeSub->trial_end ? Carbon::createFromTimestamp($stripeSub->trial_end) : now()->addMonth()),
             'cancel_at_period_end' => (bool) $stripeSub->cancel_at_period_end,
             'canceled_at' => $stripeSub->canceled_at ? Carbon::createFromTimestamp($stripeSub->canceled_at) : null,
         ]);

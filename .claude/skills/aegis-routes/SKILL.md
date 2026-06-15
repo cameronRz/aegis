@@ -23,6 +23,14 @@ GET  /checkout/success          → checkout.success                     (auth +
 GET  /checkout/cancel           → checkout.cancel                      (auth + verified)
 POST /checkout                  → checkout.store                       (auth + verified)
 
+GET  /orders                    → orders                               (auth + verified)
+GET  /orders/{order}            → orders.show                          (auth + verified) — 403 if order doesn't belong to auth user
+
+GET  /subscriptions                          → subscriptions                          (auth + verified)
+POST /subscriptions/{subscription}/cancel   → subscriptions.cancel                   (auth + verified) — 403 if not owner
+
+POST /billing/portal            → billing.portal                       (auth + verified) — 422 if no stripe_customer_id
+
 GET    /cart                    → cart                                 (auth + verified)
 POST   /cart/items              → cart.items.store                     (auth + verified)
 PATCH  /cart/items/{cartItem}   → cart.items.update                    (auth + verified)

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, ShieldCheck, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,7 +13,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { cart as cartRoute, dashboard, shop as shopRoute } from '@/routes';
+import { cart as cartRoute, dashboard, orders as ordersRoute, shop as shopRoute, subscriptions as subscriptionsRoute } from '@/routes';
 import {
     categories as adminCategoriesRoute,
     roles as adminRolesRoute,
@@ -55,6 +55,16 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             // Cart state changes via POSTs from other pages, so prefetching would
             // serve a stale cached version after items are added.
             prefetch: false,
+        },
+        {
+            title: 'Orders',
+            href: ordersRoute.url(),
+            icon: Receipt,
+        },
+        {
+            title: 'Subscriptions',
+            href: subscriptionsRoute.url(),
+            icon: RefreshCcw,
         },
         {
             title: 'Users',

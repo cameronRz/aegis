@@ -1,4 +1,6 @@
+import { usePoll } from '@inertiajs/react';
 import { Head, Link } from '@inertiajs/react';
+import { useEffect } from 'react';
 import { CheckCircle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,12 @@ const statusConfig: Record<
 export default function CheckoutSuccess({ order }: Props) {
     const isPending = order.status === 'pending';
     const { label, variant } = statusConfig[order.status];
+
+    // Poll every 3 s while the webhook hasn't arrived yet; stop once the status resolves.
+    const { stop } = usePoll(3000, { only: ['order'] });
+    useEffect(() => {
+        if (!isPending) stop();
+    }, [isPending, stop]);
 
     return (
         <>
