@@ -14,12 +14,22 @@ metadata:
 GET  /                          → welcome                              (public)
 GET  /dashboard                 → dashboard                            (auth + verified)
 
+POST /webhooks/stripe           → webhooks.stripe                      (public — Stripe signature verified internally, CSRF excluded)
+
 GET  /shop                      → shop                                 (auth + verified)
 GET  /shop/{product}            → shop.show                            (auth + verified) — 404 if product inactive or soft-deleted
 
 GET  /checkout/success          → checkout.success                     (auth + verified)
 GET  /checkout/cancel           → checkout.cancel                      (auth + verified)
 POST /checkout                  → checkout.store                       (auth + verified)
+
+GET  /orders                    → orders                               (auth + verified)
+GET  /orders/{order}            → orders.show                          (auth + verified) — 403 if order doesn't belong to auth user
+
+GET  /subscriptions                          → subscriptions                          (auth + verified)
+POST /subscriptions/{subscription}/cancel   → subscriptions.cancel                   (auth + verified) — 403 if not owner
+
+POST /billing/portal            → billing.portal                       (auth + verified) — 422 if no stripe_customer_id
 
 GET    /cart                    → cart                                 (auth + verified)
 POST   /cart/items              → cart.items.store                     (auth + verified)
@@ -62,6 +72,9 @@ DELETE /admin/products/{product}                           → admin.products.de
 POST  /admin/products/{product}/restore  [withTrashed]     → admin.products.restore               (can:delete_product)
 DELETE /admin/products/{product}/force   [withTrashed]     → admin.products.force-destroy         (can:admin)
 GET   /admin/products/{product}                            → admin.products.show                  (can:view_products)
+
+GET   /admin/orders                                        → admin.orders                          (can:admin)
+GET   /admin/orders/{order}                                → admin.orders.show                     (can:admin)
 
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 

@@ -148,6 +148,36 @@ export type Order = {
     updated_at: string;
 };
 
+export type SubscriptionStatus =
+    | 'trialing'
+    | 'active'
+    | 'past_due'
+    | 'canceled'
+    | 'unpaid'
+    | 'incomplete'
+    | 'incomplete_expired'
+    | 'paused';
+
+export type Subscription = {
+    id: number;
+    user_id: number;
+    order_id: number | null;
+    product_id: number | null;
+    product_name: string;
+    stripe_subscription_id: string;
+    stripe_price_id: string;
+    status: SubscriptionStatus;
+    quantity: number;
+    trial_ends_at: string | null;
+    current_period_start: string;
+    current_period_end: string;
+    cancel_at_period_end: boolean;
+    canceled_at: string | null;
+    product?: Product | null;
+    created_at: string;
+    updated_at: string;
+};
+
 /* @chisel-passkeys */
 export type Passkey = {
     id: number;

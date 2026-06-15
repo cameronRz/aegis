@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, ShieldCheck, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
+import { BookOpen, ClipboardList, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,9 +13,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { cart as cartRoute, dashboard, shop as shopRoute } from '@/routes';
+import { cart as cartRoute, dashboard, orders as ordersRoute, shop as shopRoute, subscriptions as subscriptionsRoute } from '@/routes';
 import {
     categories as adminCategoriesRoute,
+    orders as adminOrdersRoute,
     roles as adminRolesRoute,
     products as adminProductsRoute,
     users as adminUsersRoute,
@@ -57,6 +58,16 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             prefetch: false,
         },
         {
+            title: 'Orders',
+            href: ordersRoute.url(),
+            icon: Receipt,
+        },
+        {
+            title: 'Subscriptions',
+            href: subscriptionsRoute.url(),
+            icon: RefreshCcw,
+        },
+        {
             title: 'Users',
             href: adminUsersRoute.url(),
             icon: Users,
@@ -73,6 +84,12 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             href: adminProductsRoute.url(),
             icon: Package,
             permission: 'view_products',
+        },
+        {
+            title: 'Sales',
+            href: adminOrdersRoute.url(),
+            icon: ClipboardList,
+            permission: 'admin',
         },
         {
             title: 'Roles',
