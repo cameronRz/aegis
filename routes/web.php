@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -146,6 +147,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::middleware('can:view_products')->group(function () {
             Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
+        });
+
+        Route::middleware('can:admin')->group(function () {
+            Route::get('orders', [AdminOrderController::class, 'index'])->name('orders');
+            Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
         });
     });
 });

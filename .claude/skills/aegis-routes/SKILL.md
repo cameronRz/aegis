@@ -73,6 +73,9 @@ POST  /admin/products/{product}/restore  [withTrashed]     → admin.products.re
 DELETE /admin/products/{product}/force   [withTrashed]     → admin.products.force-destroy         (can:admin)
 GET   /admin/products/{product}                            → admin.products.show                  (can:view_products)
 
+GET   /admin/orders                                        → admin.orders                          (can:admin)
+GET   /admin/orders/{order}                                → admin.orders.show                     (can:admin)
+
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 
 **Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories, products, and roles: `roles/create` is declared before `roles/{role}/edit`. Always declare literal-segment routes before parametric routes at the same depth.

@@ -59,6 +59,19 @@ metadata:
 |---|---|
 | `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button POSTs to `checkout.store` via Wayfinder; shows "Redirecting…" while processing; surfaces `errors.checkout` below the button. Empty state shows link back to Shop. |
 
+#### `admin/orders/` (admin-facing)
+| File | Description |
+|---|---|
+| `admin/orders/index.tsx` | Paginated order management table for admins. Uses `DataTable` + `DataTablePagination` + `useDebouncedSearch`. Columns: order number (`font-mono`), client name + email (two-line cell), date, status badge, item count, total. Row click navigates to `admin/orders/show.tsx`. Search filters by order number, client first/last name, or email (server-side `ilike`). Receives `orders: PaginatedData<Order & { items_count: number; user: User | null }>` and `filters: { search? }`. |
+| `admin/orders/show.tsx` | Read-only order detail page. Header: order number + status badge + date. Client card (`Card`) showing full name + email, rendered only when `order.user` is present. Line items table (same structure as client `orders/show.tsx`). Back button to admin orders index. |
+
+**Sidebar (Phase 7):** Admin "Orders" nav item added with `ClipboardList` icon, `permission: 'admin'`, positioned between Products and Roles. Imported as `orders as adminOrdersRoute` from `@/routes/admin`.
+
+**Wayfinder imports for admin orders:**
+- Index action: `import { index as adminOrdersIndex } from '@/actions/App/Http/Controllers/Admin/OrderController'` — no-arg, `.url()` method
+- Show action: `import { show as showAdminOrder } from '@/actions/App/Http/Controllers/Admin/OrderController'` — parametric, `.url` string property
+- Route: `import { orders as adminOrdersRoute } from '@/routes/admin'` — `.url()` method for the index URL
+
 #### `orders/` (client-facing)
 | File | Description |
 |---|---|
