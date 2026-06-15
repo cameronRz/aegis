@@ -11,7 +11,7 @@ class OrderController extends Controller
 {
     public function index(Request $request): Response
     {
-        $orders = Order::where('user_id', $request->user()->id)
+        $orders = Order::forUser($request->user())
             ->withCount('items')
             ->latest()
             ->paginate(15)
@@ -24,7 +24,7 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): Response
     {
-        abort_if($order->user_id !== $request->user()->id, 403);
+        $this->authorize('view', $order);
 
         return Inertia::render('orders/show', [
             'order' => $order->load('items'),

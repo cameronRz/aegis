@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enum\OrderStatus;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,6 +39,12 @@ class Order extends Model
             $order->order_number = 'ORD-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
             $order->saveQuietly();
         });
+    }
+
+    /** @param Builder<Order> $query */
+    public function scopeForUser(Builder $query, User $user): void
+    {
+        $query->where('user_id', $user->id);
     }
 
     public function user(): BelongsTo

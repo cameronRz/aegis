@@ -58,6 +58,12 @@ class Subscription extends Model
     }
 
     /** @param Builder<Subscription> $query */
+    public function scopeForUser(Builder $query, User $user): void
+    {
+        $query->where('user_id', $user->id);
+    }
+
+    /** @param Builder<Subscription> $query */
     public function scopeActive(Builder $query): void
     {
         $query->whereIn('status', [
