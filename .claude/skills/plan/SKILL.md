@@ -11,7 +11,7 @@ metadata:
 When the user types `/plan [optional-plan-name]`:
 
 1. Always read `.claude/planning/PLANS.md` to get the current focus and sequence.
-2. Always update `.claude/planning/PLANS.md` after completing a phase implementation when necessaryto keep it current.
+2. Always update `.claude/planning/PLANS.md` after completing a phase implementation when necessary to keep it current.
 3. **If no argument was given:** identify the active plan from the "Current focus" line in PLANS.md, then read that plan file (e.g. `.claude/planning/02-permission-sets.md`).
 4. **If an argument was given** (e.g. `02-permission-sets`): read `.claude/planning/<argument>.md` instead.
 5. Output a tight summary:
