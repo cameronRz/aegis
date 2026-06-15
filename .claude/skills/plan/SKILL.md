@@ -20,3 +20,14 @@ When the user types `/plan [optional-plan-name]`:
    - **Exit checklist** — if one exists in the plan file, list unchecked items only
 
 Keep the output to roughly one screen. Do not quote the full plan file verbatim — synthesize.
+
+## Before Implementation
+
+If the user follows `/plan` with implementation intent (e.g. "let's continue", "go ahead", "proceed", "start", "implement"), do NOT begin coding. Instead, conduct a pre-implementation interview:
+
+1. **Read the next phase/step in full** from the plan file.
+2. **Surface recommendations** — flag any decisions, trade-offs, naming choices, or ambiguities in the upcoming step that are worth discussing before writing code.
+3. **Ask targeted questions** — present specific options with a recommended default pre-selected. Cover anything that would be hard to reverse (schema, API surface, naming conventions that spread across files).
+4. **Wait for the user's answers** before writing any code.
+
+Skip the interview only if the user has already answered all open questions for that step in the current conversation.
