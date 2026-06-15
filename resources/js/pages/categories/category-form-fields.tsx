@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-
 import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';

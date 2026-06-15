@@ -3,8 +3,8 @@ import { update as updateRole } from '@/actions/App/Http/Controllers/RoleControl
 import { Button } from '@/components/ui/button';
 import { roles as rolesRoute } from '@/routes/admin';
 import type { Permission, Role } from '@/types';
-import { RoleFormFields } from './role-form-fields';
 import type { RoleFormData } from './role-form-fields';
+import { RoleFormFields } from './role-form-fields';
 
 type Props = {
     role: Role & { permissions: Permission[] };

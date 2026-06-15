@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import type { RoleFormData } from './role-form-fields';
+import { RoleFormFields } from './role-form-fields';
 import { store as storeRole } from '@/actions/App/Http/Controllers/RoleController';
 import { Button } from '@/components/ui/button';
 import { roles as rolesRoute } from '@/routes/admin';
 import type { Permission } from '@/types';
-import { RoleFormFields } from './role-form-fields';
-import type { RoleFormData } from './role-form-fields';
 
 type Props = {
     allPermissions: Permission[];

@@ -1,5 +1,4 @@
 import { Head, useForm } from '@inertiajs/react';
-
 import { store as storeCategory } from '@/actions/App/Http/Controllers/CategoryController';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
