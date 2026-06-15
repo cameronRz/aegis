@@ -308,6 +308,7 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 - Fillable: `user_id`, `status`, `subtotal`, `total`, `stripe_checkout_session_id`, `stripe_payment_intent_id`
 - Casts: `status` → `OrderStatus`, `subtotal`/`total` → `integer`
 - `order_number` auto-generated in `booted()` `created` event: `'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT)`. Column is nullable in the DB to allow the initial insert, then immediately filled via `saveQuietly()`.
+- `scopeForUser(Builder $query, User $user)` — filters to `user_id = $user->id`. Usage: `Order::forUser($request->user())->...`
 
 **`OrderItem`** (`app/Models/OrderItem.php`)
 - `belongsTo(Order::class)`
@@ -324,6 +325,47 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 - **`cancel()`**: renders `checkout/cancel`; cart is untouched
 
 **`ExpireStaleOrders`** command (`app/Console/Commands/ExpireStaleOrders.php`): bulk-updates `pending` orders older than 25 hours to `expired`. Scheduled hourly in `routes/console.php`. Does not cancel Stripe sessions (they auto-expire after 24h).
+
+---
+
+## Subscription Model
+
+**`SubscriptionStatus`** enum (`app/Enum/SubscriptionStatus.php`): values mirror Stripe — `Active`, `Trialing`, `PastDue`, `Canceled`, `Incomplete`, `IncompleteExpired`, `Unpaid`, `Paused`.
+
+**`Subscription`** (`app/Models/Subscription.php`)
+- `belongsTo(User::class)` (cascadeDelete)
+- `belongsTo(Order::class)` (nullable, nullOnDelete)
+- `belongsTo(Product::class)->withTrashed()` (nullable, nullOnDelete) — uses `withTrashed()` so the product name/info can still be loaded even if soft-deleted
+- Fillable: `user_id`, `order_id`, `product_id`, `product_name`, `stripe_subscription_id`, `stripe_price_id`, `status`, `quantity`, `trial_ends_at`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at`
+- Casts: `status` → `SubscriptionStatus`, `trial_ends_at`/`current_period_start`/`current_period_end`/`canceled_at` → `datetime`, `cancel_at_period_end` → `boolean`
+
+**Scopes:**
+- `scopeForUser(Builder $query, User $user)` — filters to `user_id = $user->id`. Usage: `Subscription::forUser($request->user())->...`
+- `scopeActive(Builder $query)` — filters to statuses considered active: `active`, `trialing`, `past_due`
+
+---
+
+## Policies
+
+### `OrderPolicy` (`app/Policies/OrderPolicy.php`)
+Auto-discovered by Laravel. Governs client-side access to individual orders.
+
+| Method | Logic |
+|---|---|
+| `view(User, Order)` | `$order->user_id === $user->id` |
+
+Usage in `OrderController::show()` and `CheckoutController::success()`: `$this->authorize('view', $order)`.
+
+### `SubscriptionPolicy` (`app/Policies/SubscriptionPolicy.php`)
+Auto-discovered by Laravel. Governs client-side subscription mutations.
+
+| Method | Logic |
+|---|---|
+| `cancel(User, Subscription)` | `$subscription->user_id === $user->id` |
+
+Usage in `SubscriptionController::cancel()`: `$this->authorize('cancel', $subscription)`.
+
+**Note:** these policies only govern client-facing ownership checks. Admin routes are protected by the `can:admin` gate; no admin-specific policy methods are needed.
 
 ---
 
