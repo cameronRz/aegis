@@ -58,7 +58,8 @@ class InvitationController extends Controller
 
         Mail::to($email)->queue(new InvitationMail($invitation));
 
-        return back()->with('success', 'Invitation sent.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation sent.']);
+        return back();
     }
 
     /**
@@ -72,14 +73,16 @@ class InvitationController extends Controller
 
         Mail::to($invitation->email)->queue(new InvitationMail($invitation));
 
-        return back()->with('success', 'Invitation resent.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation resent.']);
+        return back();
     }
 
     public function destroy(Invitation $invitation): RedirectResponse
     {
         $invitation->delete();
 
-        return back()->with('success', 'Invitation revoked.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation revoked.']);
+        return back();
     }
 
     public function show(string $token): InertiaResponse|Response
