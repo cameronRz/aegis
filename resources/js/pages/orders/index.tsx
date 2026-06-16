@@ -5,22 +5,15 @@ import { show as showOrder } from '@/actions/App/Http/Controllers/OrderControlle
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
+import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
 import { orders as ordersRoute } from '@/routes';
-import type { Order, OrderStatus, PaginatedData } from '@/types';
+import type { Order, PaginatedData } from '@/types';
 
 type OrderWithCount = Order & { items_count: number };
 
 type Props = {
     orders: PaginatedData<OrderWithCount>;
-};
-
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    pending: { label: 'Processing', variant: 'secondary' },
-    paid: { label: 'Paid', variant: 'default' },
-    failed: { label: 'Failed', variant: 'destructive' },
-    refunded: { label: 'Refunded', variant: 'outline' },
-    expired: { label: 'Expired', variant: 'outline' },
 };
 
 const columnHelper = createColumnHelper<OrderWithCount>();
@@ -37,7 +30,7 @@ const columns = [
     columnHelper.accessor('status', {
         header: 'Status',
         cell: ({ getValue }) => {
-            const { label, variant } = statusConfig[getValue()];
+            const { label, variant } = orderStatusConfig[getValue()];
 
             return <Badge variant={variant}>{label}</Badge>;
         },

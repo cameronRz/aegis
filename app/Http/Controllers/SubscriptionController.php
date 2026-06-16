@@ -17,7 +17,7 @@ class SubscriptionController extends Controller
 
     public function index(Request $request): Response
     {
-        $subscriptions = Subscription::where('user_id', $request->user()->id)
+        $subscriptions = Subscription::forUser($request->user())
             ->with('product:id,name,billing_interval,billing_interval_count')
             ->latest()
             ->get();
@@ -29,7 +29,7 @@ class SubscriptionController extends Controller
 
     public function cancel(Request $request, Subscription $subscription): RedirectResponse
     {
-        abort_if($subscription->user_id !== $request->user()->id, 403);
+        $this->authorize('cancel', $subscription);
 
         try {
             $this->stripe->cancelSubscription($subscription->stripe_subscription_id, atPeriodEnd: true);

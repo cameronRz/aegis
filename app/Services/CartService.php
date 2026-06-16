@@ -21,7 +21,7 @@ class CartService
 
     public function add(Cart $cart, Product $product, int $quantity = 1): CartItem
     {
-        if (! $product->is_active) {
+        if ($product->trashed() || ! $product->is_active) {
             throw CartException::productInactive();
         }
 

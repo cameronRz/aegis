@@ -7,23 +7,16 @@ import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
+import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
 import { orders as adminOrdersRoute } from '@/routes/admin';
-import type { Order, OrderStatus, PaginatedData, User } from '@/types';
+import type { Order, PaginatedData, User } from '@/types';
 
 type OrderRow = Order & { items_count: number; user: User | null };
 
 type Props = {
     orders: PaginatedData<OrderRow>;
     filters: { search?: string };
-};
-
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    pending: { label: 'Processing', variant: 'secondary' },
-    paid: { label: 'Paid', variant: 'default' },
-    failed: { label: 'Failed', variant: 'destructive' },
-    refunded: { label: 'Refunded', variant: 'outline' },
-    expired: { label: 'Expired', variant: 'outline' },
 };
 
 const columnHelper = createColumnHelper<OrderRow>();
@@ -55,7 +48,7 @@ const columns = [
     columnHelper.accessor('status', {
         header: 'Status',
         cell: ({ getValue }) => {
-            const { label, variant } = statusConfig[getValue()];
+            const { label, variant } = orderStatusConfig[getValue()];
 
             return <Badge variant={variant}>{label}</Badge>;
         },

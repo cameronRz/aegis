@@ -35,6 +35,9 @@ class ShopController extends Controller
 
     public function show(Product $product): Response
     {
+        // Route model binding excludes soft-deleted products; this guards against
+        // any future withTrashed() on the binding.
+        abort_if($product->trashed(), 404);
         abort_unless($product->is_active, 404);
 
         return Inertia::render('shop/show', [

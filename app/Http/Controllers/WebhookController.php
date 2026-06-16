@@ -28,9 +28,6 @@ class WebhookController extends Controller
         private readonly CartService $cartService,
     ) {}
 
-    /**
-     * @throws \Throwable
-     */
     public function handle(Request $request): Response
     {
         $payload = $request->getContent();
@@ -42,22 +39,27 @@ class WebhookController extends Controller
             return response('Invalid signature', 400);
         }
 
-        match ($event->type) {
-            'checkout.session.completed' => $this->handleCheckoutCompleted($event->data->object),
-            'invoice.payment_succeeded' => $this->handleInvoicePaymentSucceeded($event->data->object),
-            'invoice.payment_failed' => $this->handleInvoicePaymentFailed($event->data->object),
-            'customer.subscription.updated' => $this->handleSubscriptionUpdated($event->data->object),
-            'customer.subscription.deleted' => $this->handleSubscriptionDeleted($event->data->object),
-            'charge.refunded' => $this->handleChargeRefunded($event->data->object),
-            default => null,
-        };
+        try {
+            match ($event->type) {
+                'checkout.session.completed' => $this->handleCheckoutCompleted($event->data->object),
+                'invoice.payment_succeeded' => $this->handleInvoicePaymentSucceeded($event->data->object),
+                'invoice.payment_failed' => $this->handleInvoicePaymentFailed($event->data->object),
+                'customer.subscription.updated' => $this->handleSubscriptionUpdated($event->data->object),
+                'customer.subscription.deleted' => $this->handleSubscriptionDeleted($event->data->object),
+                'charge.refunded' => $this->handleChargeRefunded($event->data->object),
+                default => null,
+            };
+        } catch (\Throwable $e) {
+            Log::channel('stripe')->error('Unhandled webhook exception', [
+                'event_type' => $event->type,
+                'event_id' => $event->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response('OK', 200);
     }
 
-    /**
-     * @throws \Throwable
-     */
     private function handleCheckoutCompleted(CheckoutSession $session): void
     {
         $order = Order::with('items.product', 'user')

@@ -166,7 +166,7 @@ class CheckoutController extends Controller
             ->where('stripe_checkout_session_id', $sessionId)
             ->firstOrFail();
 
-        abort_unless($order->user_id === $request->user()->id, 403);
+        $this->authorize('view', $order);
 
         return Inertia::render('checkout/success', [
             'order' => $order,
