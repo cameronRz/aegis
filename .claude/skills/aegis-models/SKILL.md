@@ -44,7 +44,7 @@ The central model. Represents both admin-side staff and (eventually) client-side
 
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `SoftDeletes`, `TwoFactorAuthenticatable`
 
-**Soft delete cleanup (`booted()`):** on `deleting()`, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). The `role_user` pivot rows cascade-delete automatically. The `role` column is a plain `string` cast to `Tier` (not a Postgres enum).
+**Soft delete cleanup (`booted()`):** on `deleting()`, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). The `role_user` pivot rows cascade-delete automatically. The `tier` column is a plain `string` cast to `Tier` (not a Postgres enum). The DB column and TS type are both named `tier` — not `role`. Factories and tests must use `['tier' => Tier::Admin]`, not `['role' => 'admin']`.
 
 **Auth + soft delete:** the `SoftDeletes` global scope (`whereNull('deleted_at')`) means `User::find($id)` returns `null` for soft-deleted users, so Laravel's session-based re-auth treats them as logged out and login attempts fail validation. Use `User::onlyTrashed()` / `withTrashed()` for trash/restore/force-delete flows.
 
@@ -345,6 +345,31 @@ Laravel 12+ ships a minimal base `Controller` class with no traits. This project
 
 ---
 
+## Invitation Model
+
+**`Invitation`** (`app/Models/Invitation.php`)
+- `inviter()` → `BelongsTo(User::class, 'invited_by')` — the admin who sent the invite. Named `inviter` (not `invitedBy`) to avoid colliding with the FK column of the same snake_case name in JSON serialization.
+- Fillable: `email`, `token`, `invited_by`, `role`, `accepted_at`
+- Casts: `accepted_at` → `datetime`
+- `scopePending(Builder)` — `whereNull('accepted_at')`
+- `scopeExpired(Builder)` — `whereNull('accepted_at')->where('created_at', '<', now()->subDays(7))`
+- `isExpired(): bool` — true if `accepted_at` is null and `created_at` is older than 7 days
+- `isAccepted(): bool` — true if `accepted_at` is not null
+
+**`InvitationController`** (`app/Http/Controllers/InvitationController.php`)
+- `index()` — paginated list of pending invitations with `inviter:id,first_name,last_name` eager loaded; admin only
+- `store()` — validates email, guards against existing user and duplicate pending invite, creates invitation with random 64-char hex token, queues `InvitationMail`
+- `resend(Invitation)` — generates new token, sets `created_at = now()` directly (not via `update()`), re-queues mail
+- `destroy(Invitation)` — hard deletes the invitation
+- `show(string $token)` — public; 404 if not found or accepted, 410 if expired, renders `invitations/accept`
+- `accept(string $token)` — public; same guards; validates first/last name + password; creates `User` (tier defaults to 'user' via DB default); creates Stripe customer; marks `accepted_at`; `Auth::login($user)`; redirects to dashboard
+
+**`InvitationMail`** (`app/Mail/InvitationMail.php`) — queued mailable; `afterCommit()`; view: `mail.invitation`; injects accept link via `route('invitations.show', $invitation->token)`
+
+**Factory:** `InvitationFactory` — defaults: fake email, random token, `User::factory()` for `invited_by`, `role = 'user'`, `accepted_at = null`
+
+---
+
 ## Policies
 
 ### `OrderPolicy` (`app/Policies/OrderPolicy.php`)
@@ -434,6 +459,7 @@ Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver
 | `orders` | Purchase records: `order_number` (auto-generated `ORD-000001` in `created` event), `user_id` (nullable, nullOnDelete), `status` (`OrderStatus` enum), `subtotal`/`total` (cents), `stripe_checkout_session_id`, `stripe_payment_intent_id` |
 | `order_items` | Snapshot line items per order: `order_id` (cascadeDelete), `product_id` (nullable, nullOnDelete), `product_name`, `product_sku`, `product_type`, `price` (cents), `quantity` |
 | `subscriptions` | Active/historical subscription records: `user_id` (cascadeDelete), `order_id` (nullable, nullOnDelete), `product_id` (nullable, nullOnDelete), `product_name` (snapshot), `stripe_subscription_id` (unique, index), `stripe_price_id`, `status` (string matching Stripe values), `quantity`, `trial_ends_at`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `canceled_at` |
+| `invitations` | Client invitation records: `email` (unique), `token` (unique, 64-char hex), `invited_by` (nullable FK → users, nullOnDelete), `role` (default `'user'`), `accepted_at` (nullable timestamp) |
 | `stripe.log` | Dedicated daily log channel (`storage/logs/stripe-YYYY-MM-DD.log`) for all Stripe errors; 14-day rotation |
 | `passkeys` | WebAuthn credentials (Fortify managed) |
 | `password_reset_tokens` | Laravel password reset |

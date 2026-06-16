@@ -76,6 +76,14 @@ GET   /admin/products/{product}                            → admin.products.sh
 GET   /admin/orders                                        → admin.orders                          (can:admin)
 GET   /admin/orders/{order}                                → admin.orders.show                     (can:admin)
 
+GET    /admin/invitations                                   → admin.invitations                     (can:admin)
+POST   /admin/invitations                                   → admin.invitations.store               (can:admin)
+POST   /admin/invitations/{invitation}/resend               → admin.invitations.resend              (can:admin)
+DELETE /admin/invitations/{invitation}                      → admin.invitations.destroy             (can:admin)
+
+GET  /invitations/{token}                                   → invitations.show                      (public — token validates; 404 if not found/accepted, 410 if expired)
+POST /invitations/{token}                                   → invitations.accept                    (public — creates user, logs them in, redirects to /dashboard)
+
 **`withTrashed` routes:** `restore` and `force-destroy` use `->withTrashed()` on the route definition so that Laravel's route model binding resolves soft-deleted `{product}` records. Without it, binding would 404 on trashed products.
 
 **Route ordering note:** `users/create` and `users/trash` are declared before `users/{user}` to prevent route model binding from treating the literal "create"/"trash" segments as a user ID. `users/{user}/edit` is declared before `users/{user}` for the same reason. The same pattern applies to categories, products, and roles: `roles/create` is declared before `roles/{role}/edit`. Always declare literal-segment routes before parametric routes at the same depth.
