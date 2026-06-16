@@ -196,3 +196,15 @@ export type TwoFactorSetupData = {
 export type TwoFactorSecretKey = {
     secretKey: string;
 };
+
+export type Invitation = {
+    id: number;
+    email: string;
+    token: string;
+    invited_by: number | null;
+    role: string;
+    accepted_at: string | null;
+    inviter?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'> | null;
+    created_at: string;
+    updated_at: string;
+};

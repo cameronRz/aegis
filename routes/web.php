@@ -5,6 +5,7 @@ use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
@@ -18,6 +19,10 @@ Route::inertia('/', 'welcome')->name('home');
 
 // Public — Stripe signature verifies authenticity
 Route::post('webhooks/stripe', [WebhookController::class, 'handle'])->name('webhooks.stripe');
+
+// Public invitation accept — token validates the request, no auth required
+Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('invitations.show');
+Route::post('invitations/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
@@ -152,6 +157,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('can:admin')->group(function () {
             Route::get('orders', [AdminOrderController::class, 'index'])->name('orders');
             Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        });
+
+        // Invitations — admin only
+        Route::middleware('can:admin')->group(function () {
+            Route::get('invitations', [InvitationController::class, 'index'])->name('invitations');
+            Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
+            Route::post('invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
         });
     });
 });

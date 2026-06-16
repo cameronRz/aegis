@@ -59,6 +59,23 @@ metadata:
 |---|---|
 | `cart/index.tsx` | Cart page. Two-column layout: line items list (left) + order summary sidebar (right, `lg:w-72`). Each item shows: thumbnail (`object-contain`), name, `ProductTypeBadge`, unit price, qty stepper (−/+), line total, Remove link. Cart error (`errors.cart`) rendered inline above items. "Clear cart" subtle link opens `ConfirmDialog`. "Proceed to Checkout" button POSTs to `checkout.store` via Wayfinder; shows "Redirecting…" while processing; surfaces `errors.checkout` below the button. Empty state shows link back to Shop. |
 
+#### `admin/invitations/`
+| File | Description |
+|---|---|
+| `admin/invitations/index.tsx` | Paginated list of pending invitations. "Invite Client" button opens a `Dialog` with an email input field. Columns: email, invited by (full name from `inviter` relation), sent date, expiry date (red if expired). Per-row actions: Resend (fresh token via POST, `disabled` while processing) + Revoke (opens `ConfirmDialog`). Receives `invitations: PaginatedData<Invitation>`. |
+
+**Wayfinder imports for admin invitations:**
+- `import { invitations as invitationsRoute } from '@/routes/admin'` — index URL for breadcrumb
+- `import { store as storeInvitation, resend as resendInvitation, destroy as destroyInvitation } from '@/routes/admin/invitations'` — sub-routes
+
+#### `invitations/` (public)
+| File | Description |
+|---|---|
+| `invitations/accept.tsx` | Public page (auth not required). Uses auth layout (`layout = { title, description }`). Fields: first name, last name, email (pre-filled, read-only, `bg-muted`), password, confirm password. Submits via Inertia `<Form action={accept(token).url} method="post">`. On success, backend logs user in and redirects to `/dashboard`. |
+
+**Wayfinder import for accept:**
+- `import { accept } from '@/routes/invitations'` — parametric, used as `accept(token).url` in `<Form action={...}>`
+
 #### `admin/orders/` (admin-facing)
 | File | Description |
 |---|---|
@@ -220,7 +237,7 @@ type Role = {   // RBAC role (admin-managed bundle of permissions)
 
 type User = {
     id, first_name, last_name, full_name, email,
-    role: Tier,  // coarse access tier
+    tier: Tier,  // coarse access tier (DB column is `tier`, not `role`)
     avatar?, email_verified_at,
     two_factor_enabled?,
     roles?: Role[],  // RBAC roles assigned via role_user pivot
@@ -278,6 +295,18 @@ type Order = {
 };
 
 type Passkey = { id, name, authenticator, created_at_diff, last_used_at_diff };
+
+type Invitation = {
+    id: number;
+    email: string;
+    token: string;
+    invited_by: number | null;
+    role: string;
+    accepted_at: string | null;
+    inviter?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'> | null;
+    created_at: string;
+    updated_at: string;
+};
 ```
 
 ### `index.ts` — Utilities
