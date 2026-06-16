@@ -1,4 +1,4 @@
-import { Form, Head, router, usePage } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import {
     createColumnHelper,
     getCoreRowModel,
@@ -34,12 +34,14 @@ type Props = {
 
 const columnHelper = createColumnHelper<Invitation>();
 
-export default function InvitationsIndex({ invitations }: Props) {
-    const [inviteOpen, setInviteOpen] = useState(false);
-    const [invitationToRevoke, setInvitationToRevoke] = useState<Invitation | null>(null);
-    const [revoking, setRevoking] = useState(false);
-    const [resendingId, setResendingId] = useState<number | null>(null);
+type TableProps = {
+    invitations: PaginatedData<Invitation>;
+    resendingId: number | null;
+    setResendingId: (id: number | null) => void;
+    setInvitationToRevoke: (invitation: Invitation) => void;
+};
 
+function InvitationsTable({ invitations, resendingId, setResendingId, setInvitationToRevoke }: TableProps) {
     const columns = useMemo(
         () => [
             columnHelper.accessor('email', { header: 'Email' }),
@@ -107,6 +109,7 @@ export default function InvitationsIndex({ invitations }: Props) {
                 ),
             }),
         ],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [resendingId],
     );
 
@@ -116,6 +119,27 @@ export default function InvitationsIndex({ invitations }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+
+    return (
+        <>
+            <DataTable table={table} emptyMessage="No pending invitations." />
+            <DataTablePagination paginatedData={invitations} />
+        </>
+    );
+}
+
+export default function InvitationsIndex({ invitations }: Props) {
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [invitationToRevoke, setInvitationToRevoke] = useState<Invitation | null>(null);
+    const [revoking, setRevoking] = useState(false);
+    const [resendingId, setResendingId] = useState<number | null>(null);
+
+    /**
+     * TanStack Table v8 doesn't re-render when `data` changes via React 19 prop updates (see
+     * eslint-disable incompatible-library above). Changing the key forces InvitationsTable to
+     * remount, giving useReactTable a fresh start with the new data.
+     */
+    const tableKey = invitations.data.map((i) => `${i.id}:${i.created_at}`).join(',');
 
     function handleRevoke() {
         if (!invitationToRevoke) return;
@@ -137,9 +161,13 @@ export default function InvitationsIndex({ invitations }: Props) {
                     <Button onClick={() => setInviteOpen(true)}>Invite Client</Button>
                 </div>
 
-                <DataTable table={table} emptyMessage="No pending invitations." />
-
-                <DataTablePagination paginatedData={invitations} />
+                <InvitationsTable
+                    key={tableKey}
+                    invitations={invitations}
+                    resendingId={resendingId}
+                    setResendingId={setResendingId}
+                    setInvitationToRevoke={setInvitationToRevoke}
+                />
             </div>
 
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
