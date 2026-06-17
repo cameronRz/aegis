@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\InvitationMail;
 use App\Models\Invitation;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Http\RedirectResponse;
@@ -59,6 +60,7 @@ class InvitationController extends Controller
         Mail::to($email)->queue(new InvitationMail($invitation));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation sent.']);
+
         return back();
     }
 
@@ -74,6 +76,7 @@ class InvitationController extends Controller
         Mail::to($invitation->email)->queue(new InvitationMail($invitation));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation resent.']);
+
         return back();
     }
 
@@ -82,6 +85,7 @@ class InvitationController extends Controller
         $invitation->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Invitation revoked.']);
+
         return back();
     }
 
@@ -141,6 +145,11 @@ class InvitationController extends Controller
         }
 
         $invitation->update(['accepted_at' => now()]);
+
+        $clientRole = Role::where('name', 'Client')->first();
+        if ($clientRole) {
+            $user->roles()->attach($clientRole->id, ['assigned_by' => null]);
+        }
 
         Auth::login($user);
 

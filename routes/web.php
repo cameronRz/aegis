@@ -65,6 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('can:edit_user')->group(function () {
+            Route::post('users/bulk-assign-roles', [UserController::class, 'bulkAssignRoles'])->name('users.bulk-assign-roles');
             Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
             Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         });

@@ -33,6 +33,7 @@ class UserController extends Controller
         return Inertia::render('users/index', [
             'users' => $users,
             'filters' => $request->only('search'),
+            'roles' => Role::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -144,6 +145,32 @@ class UserController extends Controller
         );
 
         return redirect()->route('admin.users.show', $user);
+    }
+
+    public function bulkAssignRoles(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_ids' => ['required', 'array'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids.*' => ['integer', 'exists:roles,id'],
+        ]);
+
+        $viewer = $request->user();
+
+        foreach ($validated['user_ids'] as $userId) {
+            $user = User::find($userId);
+
+            if (! $user || ! $viewer->can('update', $user)) {
+                continue;
+            }
+
+            $user->roles()->syncWithoutDetaching(
+                collect($validated['role_ids'])->mapWithKeys(fn ($id) => [$id => ['assigned_by' => $viewer->id]])
+            );
+        }
+
+        return redirect()->route('admin.users');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

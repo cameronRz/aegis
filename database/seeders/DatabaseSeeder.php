@@ -2,10 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Enum\PermissionName;
 use App\Enum\Tier;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Stripe\Exception\ApiErrorException;
 
 class DatabaseSeeder extends Seeder
@@ -50,6 +54,23 @@ class DatabaseSeeder extends Seeder
 
         // Permissions
         $this->call(PermissionSeeder::class);
+
+        // Create a default Client role with AI access and assign to all Tier::User users
+        $aiPermission = Permission::where('name', PermissionName::UseAiAssistant->value)->first();
+        $clientRole = Role::create(['name' => 'Client', 'description' => 'Default role for client users. Grants AI Assistant access.']);
+        $clientRole->permissions()->attach($aiPermission->id);
+
+        $userIds = User::where('tier', Tier::User->value)->pluck('id');
+        $now = now();
+        DB::table('role_user')->insert(
+            $userIds->map(fn ($id) => [
+                'user_id' => $id,
+                'role_id' => $clientRole->id,
+                'assigned_by' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all()
+        );
 
         // Products & categories
         $this->call(ProductSeeder::class);

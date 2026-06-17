@@ -20,4 +20,7 @@ enum PermissionName: string
     case CreateProduct = 'create_product';
     case EditProduct = 'edit_product';
     case DeleteProduct = 'delete_product';
+
+    // AI
+    case UseAiAssistant = 'use_ai_assistant';
 }
