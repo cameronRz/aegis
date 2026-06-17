@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, ClipboardList, FileText, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
+import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,6 +14,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { cart as cartRoute, dashboard, orders as ordersRoute, shop as shopRoute, subscriptions as subscriptionsRoute } from '@/routes';
+import { index as aiRoute } from '@/routes/ai';
 import {
     categories as adminCategoriesRoute,
     documents as adminDocumentsRoute,
@@ -44,6 +45,12 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             title: 'Dashboard',
             href: dashboard(),
             icon: LayoutGrid,
+        },
+        {
+            title: 'AI Assistant',
+            href: aiRoute.url(),
+            icon: Bot,
+            permission: 'use_ai_assistant',
         },
         {
             title: 'Shop',
