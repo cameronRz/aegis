@@ -61,10 +61,14 @@ class DatabaseSeeder extends Seeder
         // Permissions
         $this->call(PermissionSeeder::class);
 
-        // Create a default Client role with AI access and assign to all Tier::User users
-        $aiPermission = Permission::where('name', PermissionName::UseAiAssistant->value)->first();
-        $clientRole = Role::create(['name' => 'Client', 'description' => 'Default role for client users. Grants AI Assistant access.']);
-        $clientRole->permissions()->attach($aiPermission->id);
+        // Create a default Client role with AI + support access and assign to all Tier::User users
+        $clientRole = Role::create(['name' => 'Client', 'description' => 'Default role for client users. Grants AI Assistant and Support Chat access.']);
+        $clientRole->permissions()->attach(
+            Permission::whereIn('name', [
+                PermissionName::UseAiAssistant->value,
+                PermissionName::UseSupport->value,
+            ])->pluck('id')
+        );
 
         $userIds = User::where('tier', Tier::User->value)->pluck('id');
         $now = now();
