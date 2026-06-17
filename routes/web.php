@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DocumentController as AdminDocumentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
@@ -159,6 +160,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('can:admin')->group(function () {
             Route::get('orders', [AdminOrderController::class, 'index'])->name('orders');
             Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        });
+
+        // Documents — admin only
+        Route::middleware('can:admin')->group(function () {
+            Route::get('documents', [AdminDocumentController::class, 'index'])->name('documents');
+            Route::post('documents', [AdminDocumentController::class, 'store'])->name('documents.store');
+            Route::delete('documents/{document}', [AdminDocumentController::class, 'destroy'])->name('documents.destroy');
         });
 
         // Invitations — admin only
