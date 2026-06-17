@@ -5,6 +5,7 @@ use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
@@ -25,7 +26,7 @@ Route::get('invitations/{token}', [InvitationController::class, 'show'])->name('
 Route::post('invitations/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('shop', [ShopController::class, 'index'])->name('shop');
     Route::get('shop/{product}', [ShopController::class, 'show'])->name('shop.show');
