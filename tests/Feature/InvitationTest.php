@@ -3,6 +3,7 @@
 use App\Enum\Tier;
 use App\Mail\InvitationMail;
 use App\Models\Invitation;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\StripeService;
 use Mockery\MockInterface;
@@ -164,4 +165,35 @@ it('admin can revoke a pending invitation', function () {
         ->assertRedirect();
 
     $this->assertDatabaseMissing('invitations', ['id' => $invitation->id]);
+});
+
+// --- Client role assignment on accept ---
+
+it('assigns the Client role to the user on invitation accept', function () {
+    $clientRole = Role::factory()->create(['name' => 'Client']);
+    $invitation = Invitation::factory()->create(['email' => 'clientrole@example.com']);
+
+    $this->post(route('invitations.accept', $invitation->token), [
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+        'password' => 'Password1!Password1!',
+        'password_confirmation' => 'Password1!Password1!',
+    ]);
+
+    $user = User::where('email', 'clientrole@example.com')->firstOrFail();
+    expect($user->roles()->where('role_id', $clientRole->id)->exists())->toBeTrue();
+});
+
+it('accepts an invitation gracefully when no Client role exists', function () {
+    $invitation = Invitation::factory()->create(['email' => 'norole@example.com']);
+
+    $this->post(route('invitations.accept', $invitation->token), [
+        'first_name' => 'Jane',
+        'last_name' => 'Smith',
+        'password' => 'Password1!Password1!',
+        'password_confirmation' => 'Password1!Password1!',
+    ])->assertRedirect(route('dashboard'));
+
+    $user = User::where('email', 'norole@example.com')->firstOrFail();
+    expect($user->roles()->count())->toBe(0);
 });

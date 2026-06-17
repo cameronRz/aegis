@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import type { UserFormData } from './user-form-fields';
+import { UserFormFields } from './user-form-fields';
 import { update as updateUser } from '@/actions/App/Http/Controllers/UserController';
 import { Button } from '@/components/ui/button';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Role, Tier, User } from '@/types';
-import { UserFormFields } from './user-form-fields';
-import type { UserFormData } from './user-form-fields';
 
 type Props = {
     user: User;

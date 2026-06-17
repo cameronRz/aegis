@@ -26,6 +26,7 @@ function getGroupLabel(name: string): string {
         user: 'Users', users: 'Users',
         category: 'Categories', categories: 'Categories',
         product: 'Products', products: 'Products',
+        ai_assistant: 'AI Assistant',
     };
     return labels[noun] ?? noun.replace(/_/g, ' ');
 }

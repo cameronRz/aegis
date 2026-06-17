@@ -27,7 +27,10 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
 .claude/planning
 .claude/docs
-.claude/skills/plan-phase
-.claude/skills/plan
+.claude/skills/aegis-plan-phase
+.claude/skills/aegis-plan
+.agents/skills/aegis-plan-phase
+.agents/skills/aegis-plan

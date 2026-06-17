@@ -74,6 +74,13 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Product',
                 'description' => 'Delete products.',
             ],
+
+            // AI
+            [
+                'name' => 'use_ai_assistant',
+                'display_name' => 'Use AI Assistant',
+                'description' => 'Access the AI assistant chat.',
+            ],
         ];
 
         foreach ($permissions as $permission) {

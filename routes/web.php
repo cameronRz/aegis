@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\DocumentController as AdminDocumentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\AiConversationController;
+use App\Http\Controllers\AiMessageController;
 use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -47,6 +50,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Billing portal
     Route::post('billing/portal', [BillingPortalController::class, 'redirect'])->name('billing.portal');
 
+    // AI Assistant
+    Route::get('ai', [AiConversationController::class, 'index'])->name('ai.index');
+    Route::post('ai/conversations', [AiConversationController::class, 'store'])->name('ai.conversations.store');
+    Route::post('ai/message', [AiMessageController::class, 'store'])->name('ai.messages.store');
+
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');
     Route::post('cart/items', [CartController::class, 'store'])->name('cart.items.store');
@@ -65,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         Route::middleware('can:edit_user')->group(function () {
+            Route::post('users/bulk-assign-roles', [UserController::class, 'bulkAssignRoles'])->name('users.bulk-assign-roles');
             Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
             Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         });
@@ -158,6 +167,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware('can:admin')->group(function () {
             Route::get('orders', [AdminOrderController::class, 'index'])->name('orders');
             Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        });
+
+        // Documents — admin only
+        Route::middleware('can:admin')->group(function () {
+            Route::get('documents', [AdminDocumentController::class, 'index'])->name('documents');
+            Route::post('documents', [AdminDocumentController::class, 'store'])->name('documents.store');
+            Route::delete('documents/{document}', [AdminDocumentController::class, 'destroy'])->name('documents.destroy');
         });
 
         // Invitations — admin only
