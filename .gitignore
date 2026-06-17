@@ -29,5 +29,5 @@ yarn-error.log
 /.zed
 .claude/planning
 .claude/docs
-.claude/skills/plan-phase
-.claude/skills/plan
+.claude/skills/aegis-plan-phase
+.claude/skills/aegis-plan
