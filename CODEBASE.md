@@ -48,6 +48,8 @@ The app runs in Docker via Laravel Sail. All commands must be prefixed with `./v
 
 **Shell alias (recommended):** Add `alias sail='sh $([ -f sail ] && echo sail || echo vendor/bin/sail)'` to `~/.zshrc` or `~/.bashrc` so you can type `sail` instead of `./vendor/bin/sail`.
 
+**NEVER use the shadcn CLI** (`npx shadcn@latest ...`) — it always invokes pnpm internally, which creates a `.pnpm-store` directory (28k+ files, ~300MB) and a `pnpm-lock.yaml` inside the project. To add a shadcn component: copy the source directly from `ui.shadcn.com` and save it to `resources/js/components/ui/<name>.tsx`. Most components need no new npm packages since the required Radix primitives are already in `package.json`. If a new `@radix-ui/*` package is needed, install it with `./vendor/bin/sail npm install @radix-ui/react-<name>`. If `.pnpm-store` or `pnpm-lock.yaml` ever appear, delete them immediately with `rm -rf .pnpm-store pnpm-lock.yaml`.
+
 **Mailpit** — intercepts all outgoing email during local development. UI available at [http://localhost:8025](http://localhost:8025). Configured in `.env` with `MAIL_HOST=mailpit`, `MAIL_PORT=1025`, `MAIL_ENCRYPTION=null`.
 
 **pgvector** — the PostgreSQL image is `pgvector/pgvector:pg18`, which bundles the `vector` extension for future RAG/semantic search. The extension is enabled via `0001_01_01_000003_enable_pgvector_extension.php`, which runs before all application table migrations so any future table can add a `vector` column.

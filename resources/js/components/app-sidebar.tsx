@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
+import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, Settings2, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -25,6 +25,7 @@ import {
     users as adminUsersRoute,
 } from '@/routes/admin';
 import type { NavItem } from '@/types';
+import type { Features } from '@/types/auth';
 
 const footerNavItems: NavItem[] = [
     {
@@ -51,6 +52,7 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             href: aiRoute.url(),
             icon: Bot,
             permission: 'use_ai_assistant',
+            featureFlag: 'aiAssistantEnabled',
         },
         {
             title: 'Shop',
@@ -118,14 +120,26 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             icon: ShieldCheck,
             permission: 'admin',
         },
+        {
+            title: 'Settings',
+            href: '/admin/settings/features',
+            icon: Settings2,
+            permission: 'admin',
+        },
     ];
 }
 
 export function AppSidebar() {
-    const { auth, cartItemCount } = usePage<{ auth: { can: Record<string, boolean> }; cartItemCount: number }>().props;
+    const { auth, cartItemCount, features } = usePage<{
+        auth: { can: Record<string, boolean> };
+        cartItemCount: number;
+        features: Features;
+    }>().props;
 
     const mainNavItems = ALL_NAV_ITEMS(cartItemCount).filter(
-        (item) => !item.permission || auth.can[item.permission],
+        (item) =>
+            (!item.permission || auth.can[item.permission]) &&
+            (!item.featureFlag || features[item.featureFlag]),
     );
 
     return (

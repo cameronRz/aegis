@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DocumentController as AdminDocumentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\AiConversationController;
 use App\Http\Controllers\AiMessageController;
 use App\Http\Controllers\BillingPortalController;
@@ -182,6 +183,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
             Route::post('invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
             Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
+        });
+
+        // Settings — admin only
+        Route::middleware('can:admin')->group(function () {
+            Route::get('settings/features', [AdminSettingController::class, 'features'])->name('settings.features');
+            Route::patch('settings/features', [AdminSettingController::class, 'updateFeatures'])->name('settings.features.update');
         });
     });
 });

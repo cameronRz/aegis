@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Enum\SettingKey;
+use App\Models\AppSetting;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -53,6 +55,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'cartItemCount' => $request->user() ? (int) session('cart_count', 0) : 0,
+            'features' => [
+                'aiAssistantEnabled' => AppSetting::get(SettingKey::AiAssistantEnabled, true),
+                'supportChatEnabled' => AppSetting::get(SettingKey::SupportChatEnabled, true),
+            ],
         ];
     }
 }

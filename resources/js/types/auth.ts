@@ -99,6 +99,11 @@ export type Auth = {
     can: Can;
 };
 
+export type Features = {
+    aiAssistantEnabled: boolean;
+    supportChatEnabled: boolean;
+};
+
 export type CartItem = {
     id: number;
     cart_id: number;

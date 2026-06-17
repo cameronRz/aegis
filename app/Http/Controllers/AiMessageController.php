@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enum\DocumentStatus;
 use App\Enum\MessageRole;
+use App\Enum\SettingKey;
 use App\Http\Requests\StoreAiMessageRequest;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\AppSetting;
 use App\Models\DocumentChunk;
 use OpenAI\Contracts\ClientContract;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -15,6 +17,7 @@ class AiMessageController extends Controller
 {
     public function store(StoreAiMessageRequest $request): StreamedResponse
     {
+        abort_unless(AppSetting::get(SettingKey::AiAssistantEnabled, true), 503);
         $this->authorize('use_ai_assistant');
 
         $conversation = AiConversation::findOrFail($request->input('conversation_id'));
