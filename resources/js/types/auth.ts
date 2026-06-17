@@ -208,3 +208,33 @@ export type Invitation = {
     created_at: string;
     updated_at: string;
 };
+
+// KbDocument = Knowledge Base Document. Named to avoid shadowing the browser's built-in Document type.
+export type KbDocument = {
+    id: number;
+    user_id: number;
+    title: string;
+    original_filename: string;
+    disk_path: string;
+    mime_type: string;
+    status: 'processing' | 'ready' | 'failed';
+    user?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'> | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type AiConversation = {
+    id: number;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+};
+
+export type AiMessage = {
+    id: number;
+    conversation_id: number;
+    role: 'user' | 'assistant';
+    content: string;
+    created_at: string;
+    updated_at: string;
+};
