@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Concerns\ProfileValidationRules;
+use App\Concerns\ValidatesAssignableRoles;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,6 +11,7 @@ use Illuminate\Validation\Rule;
 class StoreUserRequest extends FormRequest
 {
     use ProfileValidationRules;
+    use ValidatesAssignableRoles;
 
     /**
      * Get the validation rules that apply to the request.

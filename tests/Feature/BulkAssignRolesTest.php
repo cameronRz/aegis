@@ -56,6 +56,31 @@ it('assigns a role to multiple users', function () {
     }
 });
 
+it('rejects bulk role assignment that grants permissions beyond the actor', function () {
+    $staffRole = Role::factory()->create(['name' => 'Staff']);
+    $staffRole->permissions()->sync([Permission::where('name', 'edit_user')->firstOrFail()->id]);
+
+    $viewProducts = Permission::create([
+        'name' => 'view_products',
+        'display_name' => 'View Products',
+        'description' => null,
+    ]);
+    $privilegedRole = Role::factory()->create(['name' => 'Product Viewer']);
+    $privilegedRole->permissions()->sync([$viewProducts->id]);
+
+    $staff = User::factory()->create(['tier' => Tier::User]);
+    $staff->roles()->attach($staffRole->id, ['assigned_by' => null]);
+    $target = User::factory()->create(['tier' => Tier::User]);
+
+    actingAs($staff)
+        ->post(route('admin.users.bulk-assign-roles'), [
+            'user_ids' => [$target->id],
+            'role_ids' => [$privilegedRole->id],
+        ])->assertSessionHasErrors('role_ids');
+
+    expect($target->fresh()->roles()->where('role_id', $privilegedRole->id)->exists())->toBeFalse();
+});
+
 it('does not remove existing roles when bulk assigning', function () {
     $target = User::factory()->create(['tier' => Tier::User]);
     $existingRole = Role::factory()->create();

@@ -16,11 +16,27 @@ class ProcessDocumentJob implements ShouldQueue
 {
     use Queueable;
 
+    public const int MAX_EXTRACTED_CHARACTERS = 100000;
+
+    public const int MAX_CHUNKS = 50;
+
+    public int $tries = 2;
+
+    public int $timeout = 120;
+
     public function __construct(public readonly Document $document) {}
+
+    /**
+     * @return int[]
+     */
+    public function backoff(): array
+    {
+        return [30, 120];
+    }
 
     public function handle(OpenAiClient $client): void
     {
-        $text = $this->extractText();
+        $text = substr($this->extractText(), 0, self::MAX_EXTRACTED_CHARACTERS);
 
         if (empty(trim($text))) {
             $this->document->update(['status' => DocumentStatus::Failed]);
@@ -88,6 +104,6 @@ class ProcessDocumentJob implements ShouldQueue
             $offset += $chunkSize - $overlap;
         }
 
-        return $chunks;
+        return array_slice($chunks, 0, self::MAX_CHUNKS);
     }
 }

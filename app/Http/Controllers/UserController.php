@@ -76,7 +76,12 @@ class UserController extends Controller
 
         return Inertia::render('users/create', [
             'availableTiers' => array_column($viewer->assignableTiers(), 'value'),
-            'roles' => Role::orderBy('name')->with('permissions')->get(['id', 'name']),
+            'roles' => Role::query()
+                ->orderBy('name')
+                ->with('permissions')
+                ->get(['id', 'name'])
+                ->filter(fn (Role $role): bool => $viewer->canAssignRole($role))
+                ->values(),
         ]);
     }
 
@@ -124,7 +129,12 @@ class UserController extends Controller
         return Inertia::render('users/edit', [
             'user' => $user,
             'availableTiers' => array_column($viewer->assignableTiers(), 'value'),
-            'roles' => Role::orderBy('name')->with('permissions')->get(['id', 'name']),
+            'roles' => Role::query()
+                ->orderBy('name')
+                ->with('permissions')
+                ->get(['id', 'name'])
+                ->filter(fn (Role $role): bool => $viewer->canAssignRole($role))
+                ->values(),
             'selectedRoleIds' => $user->roles->pluck('id')->toArray(),
         ]);
     }
@@ -139,10 +149,21 @@ class UserController extends Controller
         $user->tier = Tier::from($request->validated('tier'));
         $user->save();
 
-        $user->roles()->syncWithPivotValues(
-            $request->validated('role_ids', []),
-            ['assigned_by' => $request->user()->id]
-        );
+        $preservedRolePayload = $user->roles()
+            ->with('permissions')
+            ->get()
+            ->reject(fn (Role $role): bool => $request->user()->canAssignRole($role))
+            ->mapWithKeys(fn (Role $role): array => [
+                $role->id => ['assigned_by' => $role->pivot->assigned_by],
+            ]);
+
+        $submittedRolePayload = collect($request->validated('role_ids', []))
+            ->unique()
+            ->mapWithKeys(fn ($roleId): array => [
+                (int) $roleId => ['assigned_by' => $request->user()->id],
+            ]);
+
+        $user->roles()->sync($preservedRolePayload->union($submittedRolePayload)->all());
 
         return redirect()->route('admin.users.show', $user);
     }
@@ -157,6 +178,16 @@ class UserController extends Controller
         ]);
 
         $viewer = $request->user();
+        $roles = Role::query()
+            ->with('permissions')
+            ->whereIn('id', $validated['role_ids'])
+            ->get();
+
+        if ($roles->contains(fn (Role $role): bool => ! $viewer->canAssignRole($role))) {
+            return back()->withErrors([
+                'role_ids' => 'You may only assign roles that do not grant permissions beyond your own.',
+            ]);
+        }
 
         foreach ($validated['user_ids'] as $userId) {
             $user = User::find($userId);

@@ -72,6 +72,19 @@ test('upload rejects non pdf/txt files', function () {
         ->assertSessionHasErrors(['file']);
 });
 
+test('upload rejects files with allowed extensions but unexpected mime types', function () {
+    Storage::fake('local');
+
+    $file = UploadedFile::fake()->create('manual.txt', 10, 'application/octet-stream');
+
+    actingAs($this->admin)
+        ->post(route('admin.documents.store'), [
+            'title' => 'Manual',
+            'file' => $file,
+        ])
+        ->assertSessionHasErrors(['file']);
+});
+
 test('admin can delete a document and file is removed', function () {
     Storage::fake('local');
     Queue::fake();

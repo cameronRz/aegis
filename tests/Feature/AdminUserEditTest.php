@@ -200,6 +200,62 @@ it('assigns a role on update', function () {
     expect($this->target->fresh()->roles()->where('role_id', $role->id)->exists())->toBeTrue();
 });
 
+it('rejects role updates that grant permissions beyond the actor', function () {
+    $staffRole = Role::factory()->create(['name' => 'Staff']);
+    $staffRole->permissions()->sync([$this->editPermission->id]);
+
+    $viewProducts = Permission::create([
+        'name' => 'view_products',
+        'display_name' => 'View Products',
+        'description' => null,
+    ]);
+    $privilegedRole = Role::factory()->create(['name' => 'Product Viewer']);
+    $privilegedRole->permissions()->sync([$viewProducts->id]);
+
+    $staff = User::factory()->create(['tier' => Tier::User]);
+    $staff->roles()->attach($staffRole->id, ['assigned_by' => null]);
+
+    actingAs($staff)->patch("/admin/users/{$this->target->id}", [
+        'first_name' => $this->target->first_name,
+        'last_name' => $this->target->last_name,
+        'email' => $this->target->email,
+        'tier' => 'user',
+        'role_ids' => [$privilegedRole->id],
+    ])->assertSessionHasErrors('role_ids');
+
+    expect($this->target->fresh()->roles()->where('role_id', $privilegedRole->id)->exists())->toBeFalse();
+});
+
+it('preserves existing roles the actor is not allowed to assign', function () {
+    $staffRole = Role::factory()->create(['name' => 'Staff']);
+    $staffRole->permissions()->sync([$this->editPermission->id]);
+
+    $viewProducts = Permission::create([
+        'name' => 'view_products',
+        'display_name' => 'View Products',
+        'description' => null,
+    ]);
+    $privilegedRole = Role::factory()->create(['name' => 'Product Viewer']);
+    $privilegedRole->permissions()->sync([$viewProducts->id]);
+    $this->target->roles()->attach($privilegedRole->id, ['assigned_by' => $this->siteAdmin->id]);
+
+    $staff = User::factory()->create(['tier' => Tier::User]);
+    $staff->roles()->attach($staffRole->id, ['assigned_by' => null]);
+
+    actingAs($staff)->patch("/admin/users/{$this->target->id}", [
+        'first_name' => $this->target->first_name,
+        'last_name' => $this->target->last_name,
+        'email' => $this->target->email,
+        'tier' => 'user',
+        'role_ids' => [],
+    ])->assertRedirect();
+
+    $preservedRole = $this->target->fresh()->roles()->where('role_id', $privilegedRole->id)->first();
+
+    expect($preservedRole)->not->toBeNull()
+        ->and($preservedRole->pivot->assigned_by)->toBe($this->siteAdmin->id);
+});
+
 it('clears roles when empty array is sent on update', function () {
     $role = Role::factory()->create();
     $this->target->roles()->attach($role->id, ['assigned_by' => null]);

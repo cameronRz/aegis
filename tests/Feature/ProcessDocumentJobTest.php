@@ -49,6 +49,37 @@ test('job extracts text from txt file, stores chunks, and sets status to ready',
     expect(DocumentChunk::where('document_id', $document->id)->count())->toBeGreaterThan(0);
 });
 
+test('job limits the number of document chunks sent for embeddings', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $content = str_repeat('This is long test content for the document. ', 3000);
+    $path = 'documents/long.txt';
+    Storage::disk('local')->put($path, $content);
+
+    $document = Document::factory()->create([
+        'disk_path' => $path,
+        'mime_type' => 'text/plain',
+    ]);
+
+    $responses = array_fill(
+        0,
+        ProcessDocumentJob::MAX_CHUNKS,
+        CreateResponse::fake([
+            'data' => [
+                ['embedding' => array_fill(0, 1536, 0.1), 'index' => 0, 'object' => 'embedding'],
+            ],
+        ])
+    );
+
+    $fakeClient = new ClientFake($responses);
+    $this->app->instance(ClientContract::class, $fakeClient);
+
+    app()->call([new ProcessDocumentJob($document), 'handle']);
+
+    expect(DocumentChunk::where('document_id', $document->id)->count())->toBe(ProcessDocumentJob::MAX_CHUNKS);
+});
+
 test('job sets status to failed when failed() hook is called', function () {
     $document = Document::factory()->create();
 

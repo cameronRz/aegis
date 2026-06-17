@@ -187,6 +187,34 @@ it('assigns roles when creating a user', function () {
     expect($newUser->roles()->where('role_id', $role->id)->exists())->toBeTrue();
 });
 
+it('rejects role assignment that grants permissions beyond the actor', function () {
+    Notification::fake();
+
+    $staffRole = Role::factory()->create(['name' => 'Staff']);
+    $staffRole->permissions()->sync([$this->createPermission->id]);
+
+    $viewProducts = Permission::create([
+        'name' => 'view_products',
+        'display_name' => 'View Products',
+        'description' => null,
+    ]);
+    $privilegedRole = Role::factory()->create(['name' => 'Product Viewer']);
+    $privilegedRole->permissions()->sync([$viewProducts->id]);
+
+    $staff = User::factory()->create(['tier' => Tier::User]);
+    $staff->roles()->attach($staffRole->id, ['assigned_by' => null]);
+
+    actingAs($staff)->post('/admin/users', [
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'email' => 'jane@example.com',
+        'tier' => 'user',
+        'role_ids' => [$privilegedRole->id],
+    ])->assertSessionHasErrors('role_ids');
+
+    expect(User::where('email', 'jane@example.com')->exists())->toBeFalse();
+});
+
 it('creates a user without roles when none are provided', function () {
     Notification::fake();
 
