@@ -14,9 +14,14 @@ metadata:
 | File | Description |
 |---|---|
 | `welcome.tsx` | Public landing page with auth links |
-| `dashboard.tsx` | Authenticated home; placeholder grid (3-col desktop) |
+| `dashboard.tsx` | Client dashboard: 3 stat cards (Total Orders, Active Subscriptions, Member Since) + recent orders table (5 rows); all counts are deferred props with `Skeleton` fallbacks; "View order history →" link to `/orders` |
 
 ### Admin pages
+
+#### `admin/` (root)
+| File | Description |
+|---|---|
+| `admin/dashboard.tsx` | Admin dashboard: 4 stat cards (Total Revenue, Revenue This Month, Active Subscriptions, New Clients This Month) in a 2-col md / 4-col lg grid + recent orders table (5 rows, no DataTable); all metrics are deferred props with `Skeleton` fallbacks; "View all orders →" link to admin orders index |
 
 #### `users/`
 | File | Description |

@@ -12,7 +12,7 @@ metadata:
 
 ```
 GET  /                          → welcome                              (public)
-GET  /dashboard                 → dashboard                            (auth + verified)
+GET  /dashboard                 → dashboard                            (auth + verified) — DashboardController@index; renders admin/dashboard for admins, dashboard for clients
 
 POST /webhooks/stripe           → webhooks.stripe                      (public — Stripe signature verified internally, CSRF excluded)
 

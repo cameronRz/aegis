@@ -29,3 +29,5 @@ yarn-error.log
 /.zed
 .claude/planning
 .claude/docs
+.claude/skills/plan-phase
+.claude/skills/plan
