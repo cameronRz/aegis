@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\DocumentController as AdminDocumentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\AiConversationController;
+use App\Http\Controllers\AiMessageController;
 use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -47,6 +49,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Billing portal
     Route::post('billing/portal', [BillingPortalController::class, 'redirect'])->name('billing.portal');
+
+    // AI Assistant
+    Route::get('ai', [AiConversationController::class, 'index'])->name('ai.index');
+    Route::post('ai/conversations', [AiConversationController::class, 'store'])->name('ai.conversations.store');
+    Route::post('ai/message', [AiMessageController::class, 'store'])->name('ai.messages.store');
 
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');
