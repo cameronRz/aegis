@@ -550,3 +550,124 @@ Money::format(int $cents, string $currency = 'USD', string $locale = 'en_US'): s
 ```
 
 Uses PHP's `NumberFormatter` (intl extension). The frontend equivalent is `formatCents()` in `resources/js/lib/money.ts`. Raw cents always travel in JSON; format only at the point of output.
+
+---
+
+## AI Assistant Models (Phase 10)
+
+### `PermissionName::UseAiAssistant`
+Case value: `'use_ai_assistant'`. Gate auto-registered via `PermissionName::cases()` loop. Granted to all seeded clients by default in `PermissionSeeder`. Admins bypass via `isAdmin()`.
+
+### `DocumentStatus` enum (`App\Enum\DocumentStatus`)
+String-backed: `Processing = 'processing'`, `Ready = 'ready'`, `Failed = 'failed'`.
+
+### `MessageRole` enum (`App\Enum\MessageRole`)
+String-backed: `User = 'user'`, `Assistant = 'assistant'`.
+
+### `Document` model (`app/Models/Document.php`)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `user_id` | int | FK → users, cascadeDelete |
+| `title` | string | |
+| `original_filename` | string | |
+| `disk_path` | string | path under `local` disk, e.g. `documents/filename.txt` |
+| `mime_type` | string | |
+| `status` | `DocumentStatus` enum | default `processing`; cast |
+| `timestamps` | | |
+
+**Relationships:** `user()` → `BelongsTo(User)`, `chunks()` → `HasMany(DocumentChunk)`
+
+**Fillable:** `user_id`, `title`, `original_filename`, `disk_path`, `mime_type`, `status`
+
+**Factory:** `DocumentFactory` — states: `ready()`, `failed()`
+
+### `DocumentChunk` model (`app/Models/DocumentChunk.php`)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `document_id` | int | FK → documents, cascadeDelete |
+| `content` | text | |
+| `embedding` | vector(1536) | added via `DB::statement()` — not a Blueprint column |
+| `chunk_index` | unsignedInteger | |
+| `timestamps` | | |
+
+**Relationships:** `document()` → `BelongsTo(Document)`
+
+**Fillable:** `document_id`, `content`, `embedding`, `chunk_index`
+
+**Factory:** `DocumentChunkFactory`
+
+**Vector similarity search:** `DocumentChunk::orderByRaw('embedding <=> ?::vector', [$vector])->limit(5)->with('document')->get()` — always scope to `whereHas('document', fn($q) => $q->where('status', DocumentStatus::Ready))` to exclude chunks from failed/processing docs.
+
+### `AiConversation` model (`app/Models/AiConversation.php`)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `user_id` | int | FK → users, cascadeDelete |
+| `timestamps` | | |
+
+**Relationships:** `user()` → `BelongsTo(User)`, `messages()` → `HasMany(AiMessage, 'conversation_id')`
+
+**Fillable:** `user_id`
+
+**Factory:** `AiConversationFactory`
+
+**Controller logic:** `AiConversationController::index()` loads latest conversation (or creates one) for `auth()->user()`. `store()` creates a new conversation and redirects to `/ai`.
+
+### `AiMessage` model (`app/Models/AiMessage.php`)
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | int | |
+| `conversation_id` | int | FK → ai_conversations, cascadeDelete; index on this column |
+| `role` | `MessageRole` enum | cast |
+| `content` | text | |
+| `timestamps` | | |
+
+**Relationships:** `conversation()` → `BelongsTo(AiConversation, 'conversation_id')`
+
+**Fillable:** `conversation_id`, `role`, `content`
+
+**Factory:** `AiMessageFactory` — state: `assistant()`
+
+### `ProcessDocumentJob` (`app/Jobs/ProcessDocumentJob.php`)
+
+Queued (`ShouldQueue`). Dispatched by `DocumentObserver::created()`.
+
+**Constructor:** `public readonly Document $document`
+
+**`handle(ClientContract $client)`** — method-injected; `ClientContract` is bound as singleton in `AppServiceProvider`.
+
+**Logic:**
+1. Extract text: PDF → `smalot/pdfparser`; TXT → `Storage::disk('local')->get()`
+2. Split into ~2000-char chunks with ~400-char overlap
+3. Per chunk: embed via OpenAI `text-embedding-3-small`, raw INSERT with `DB::statement()` for the vector column
+4. On success: `$document->update(['status' => DocumentStatus::Ready])`
+5. `failed(Throwable)` hook: `$document->update(['status' => DocumentStatus::Failed])`
+
+**Testing:** `Queue::fake()` before `Document::factory()->create()` (observer dispatches synchronously on sync queue). Set `$this->app->instance(ClientContract::class, $fakeClient)` before calling `app()->call([$job, 'handle'])`.
+
+### `DocumentObserver` (`app/Observers/DocumentObserver.php`)
+
+`created()` → `ProcessDocumentJob::dispatch($document)`. Registered in `AppServiceProvider::boot()` via `Document::observe(DocumentObserver::class)`.
+
+### `OpenAI\Contracts\ClientContract` binding
+
+Singleton in `AppServiceProvider::register()`:
+```php
+$this->app->singleton(ClientContract::class, fn () => OpenAI::client(config('services.openai.key') ?? ''));
+```
+`config('services.openai.key')` reads `OPENAI_API_KEY` from `.env`. In tests, swap with: `$this->app->instance(ClientContract::class, new ClientFake([...]))`.
+
+### New DB tables (Phase 10)
+
+| Table | Purpose |
+|---|---|
+| `documents` | Admin-uploaded knowledge base files; `user_id` cascadeDelete |
+| `document_chunks` | ~500-token text chunks with `vector(1536)` embeddings; `document_id` cascadeDelete; ivfflat cosine index |
+| `ai_conversations` | One conversation per user (or more via "New conversation"); `user_id` cascadeDelete |
+| `ai_messages` | Chat history; `conversation_id` cascadeDelete; index on `conversation_id` |

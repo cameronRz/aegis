@@ -575,3 +575,76 @@ Key token groups:
 - `--radius` — base border radius (`0.625rem`); `lg`/`md`/`sm` derived from it
 
 Dark mode is class-based: `.dark` on the root. Custom variant: `@custom-variant dark (&:is(.dark *))`.
+
+---
+
+## Phase 10 — AI Assistant
+
+### New Pages
+
+#### `admin/documents/index.tsx`
+Admin document manager. Receives `documents: PaginatedData<KbDocument & { user: Pick<User, 'full_name'> }>`.
+
+- **Upload Dialog** — `useForm` with `forceFormData: true`; fields: `title` (Input) + `file` (Input `type="file"`, `accept=".pdf,.txt"`). Submits to `storeDocument.url()`.
+- **DataTable** — columns: Title, File (original_filename), Status badge, Uploaded By, Date, Delete button. Uses standard `DataTable` + `DataTablePagination` + `tableKey` pattern.
+- **Status badge config:** `processing` → `secondary` variant + `Loader2 animate-spin` icon; `ready` → `default`; `failed` → `destructive`.
+- **Delete** → `ConfirmDialog` → `router.delete(destroyDocument(doc).url)`.
+- **Polling** — `usePoll(3000, { only: ['documents'] })` always active; auto-throttles when tab is inactive.
+- **Breadcrumb:** `[{ title: 'Documents', href: documentsRoute.url() }]`
+
+Wayfinder imports:
+```ts
+import { documents as documentsRoute } from '@/routes/admin';
+import { store as storeDocument, destroy as destroyDocument } from '@/routes/admin/documents';
+```
+
+#### `ai/show.tsx`
+Client-facing chat UI. Receives `conversation: AiConversation` and `messages: AiMessage[]` as separate Inertia props.
+
+- **Layout** — `flex h-full flex-1 flex-col overflow-hidden`: fixed header + scrollable messages area + fixed input footer.
+- **Messages** — local `useState<AiMessage[]>` seeded from Inertia props. New messages appended locally; no Inertia page reload mid-session. Negative IDs (`-Date.now()`) used for locally-created messages to avoid DB id collisions.
+- **Streaming** — `fetch('/ai/message', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrfToken(), ... } })` + `ReadableStream`. Parses SSE events: `{type:'sources'}` first, then `{type:'delta'}` per token, then `[DONE]`. CSRF token read from `XSRF-TOKEN` cookie via `document.cookie`.
+- **Sources** — stored in `sourcesMap: Record<number, Source[]>` keyed by message ID. Shown as a collapsible `ChevronRight` toggle below each assistant bubble.
+- **Streaming bubble** — `streamingContent: string | null`; `null` = not streaming, `''` = started but empty, non-empty = in progress. Shown as a separate `MessageBubble` with `isStreaming` prop (blinking cursor).
+- **Input** — shadcn `Textarea` (`max-h-32 resize-none`); Enter sends, Shift+Enter newlines. Send button with `Loader2` spinner while streaming.
+- **Auto-scroll** — `el.scrollTop = el.scrollHeight` on `[messages.length, streamingContent]` via `useEffect`.
+- **New conversation** — `router.post(storeConversation.url())` (Inertia handles CSRF). Redirects to `/ai`, remounts component with fresh props.
+- **Breadcrumb:** `[{ title: 'AI Assistant', href: aiRoute.url() }]`
+
+Wayfinder imports:
+```ts
+import { index as aiRoute } from '@/routes/ai';
+import { store as storeConversation } from '@/routes/ai/conversations';
+```
+
+### New TypeScript Types (`resources/js/types/auth.ts`)
+
+```ts
+// KbDocument = Knowledge Base Document. Named to avoid shadowing the browser's built-in Document type.
+type KbDocument = {
+    id: number; user_id: number; title: string; original_filename: string;
+    disk_path: string; mime_type: string;
+    status: 'processing' | 'ready' | 'failed';
+    user?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'> | null;
+    created_at: string; updated_at: string;
+};
+
+type AiConversation = { id: number; user_id: number; created_at: string; updated_at: string };
+
+type AiMessage = {
+    id: number; conversation_id: number;
+    role: 'user' | 'assistant'; content: string;
+    created_at: string; updated_at: string;
+};
+```
+
+### Sidebar additions (Phase 10)
+
+| Item | Icon | Permission | Position |
+|---|---|---|---|
+| AI Assistant | `Bot` | `use_ai_assistant` | Between Dashboard and Shop |
+| Documents | `FileText` | `admin` | Between Sales and Invitations |
+
+### New UI Component
+
+`Textarea` (`resources/js/components/ui/textarea.tsx`) — added via `npx shadcn@latest add textarea`. Uses `field-sizing-content` for auto-height growth. Apply `max-h-32 resize-none` in the chat input to cap growth.

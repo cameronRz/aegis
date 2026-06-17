@@ -183,7 +183,7 @@ export default function AiShow({ conversation, messages: initialMessages }: Prop
         if (sources.length) {
             setSourcesMap((prev) => ({ ...prev, [assistantId]: sources }));
         }
-        
+
         setStreamingContent(null);
         setIsStreaming(false);
     }

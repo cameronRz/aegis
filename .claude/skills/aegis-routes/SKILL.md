@@ -81,6 +81,14 @@ POST   /admin/invitations                                   → admin.invitation
 POST   /admin/invitations/{invitation}/resend               → admin.invitations.resend              (can:admin)
 DELETE /admin/invitations/{invitation}                      → admin.invitations.destroy             (can:admin)
 
+GET    /admin/documents                                     → admin.documents                       (can:admin)
+POST   /admin/documents                                     → admin.documents.store                 (can:admin)
+DELETE /admin/documents/{document}                          → admin.documents.destroy               (can:admin)
+
+GET    /ai                                                  → ai.index                              (auth + verified; authorize('use_ai_assistant') in controller)
+POST   /ai/conversations                                    → ai.conversations.store                (auth + verified; authorize('use_ai_assistant') in controller)
+POST   /ai/message                                          → ai.messages.store                     (auth + verified; authorize('use_ai_assistant') in controller) — returns SSE StreamedResponse
+
 GET  /invitations/{token}                                   → invitations.show                      (public — token validates; 404 if not found/accepted, 410 if expired)
 POST /invitations/{token}                                   → invitations.accept                    (public — creates user, logs them in, redirects to /dashboard)
 
@@ -126,6 +134,28 @@ The same pattern applies to shop routes:
 import { shop } from '@/routes';           // GET /shop (no-arg)
 import { show } from '@/routes/shop';      // GET /shop/{product} (parametric)
 show(product).url                          // string property — do not call as function
+```
+
+## AI Assistant & Admin Documents (Phase 10) Wayfinder Imports
+
+```ts
+// Admin documents
+import { documents as adminDocumentsRoute } from '@/routes/admin';
+import { store as storeDocument, destroy as destroyDocument } from '@/routes/admin/documents';
+adminDocumentsRoute.url()       // GET /admin/documents
+storeDocument.url()             // POST /admin/documents
+destroyDocument(document).url   // DELETE /admin/documents/{id}  (string property)
+
+// Client AI
+import { index as aiRoute } from '@/routes/ai';
+import { store as storeConversation } from '@/routes/ai/conversations';
+import { store as storeMessage } from '@/routes/ai/messages';
+aiRoute.url()                   // GET /ai
+storeConversation.url()         // POST /ai/conversations
+storeMessage.url()              // POST /ai/message
+
+// AiMessageController::store returns a StreamedResponse — consume via fetch + ReadableStream,
+// NOT via Inertia router. See ai/show.tsx for the implementation pattern.
 ```
 
 ## Fortify Auth Routes (auto-registered)
