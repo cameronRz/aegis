@@ -106,6 +106,21 @@ class User extends Authenticatable implements PasskeyUser
             ->contains($permission->value);
     }
 
+    public function canAssignRole(Role $role): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $role->loadMissing('permissions');
+
+        return $role->permissions->every(function (Permission $permission): bool {
+            $permissionName = PermissionName::tryFrom($permission->name);
+
+            return $permissionName !== null && $this->hasPermission($permissionName);
+        });
+    }
+
     protected function fullName(): Attribute
     {
         return Attribute::make(

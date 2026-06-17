@@ -15,7 +15,7 @@ class StoreDocumentRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'file' => ['required', 'file', 'mimes:pdf,txt', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:pdf,txt', 'mimetypes:application/pdf,text/plain', 'max:10240'],
         ];
     }
 }

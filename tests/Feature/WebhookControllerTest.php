@@ -172,6 +172,34 @@ it('decrements inventory for tracked physical products on checkout', function ()
     expect($product->fresh()->stock_quantity)->toBe(7);
 });
 
+it('does not decrement tracked inventory below zero on checkout', function () {
+    $product = Product::factory()->physical()->create([
+        'track_inventory' => true,
+        'stock_quantity' => 2,
+    ]);
+    $order = Order::factory()->create([
+        'user_id' => User::factory()->create()->id,
+        'status' => OrderStatus::Pending,
+    ]);
+    OrderItem::factory()->forProduct($product)->create([
+        'order_id' => $order->id,
+        'quantity' => 3,
+    ]);
+
+    fakeStripeEvent('checkout.session.completed', [
+        'id' => 'cs_test',
+        'object' => 'checkout.session',
+        'client_reference_id' => (string) $order->id,
+        'payment_intent' => 'pi_test',
+        'subscription' => null,
+        'mode' => 'payment',
+    ]);
+
+    $this->post(route('webhooks.stripe'))->assertOk();
+
+    expect($product->fresh()->stock_quantity)->toBe(0);
+});
+
 it('clears the user cart on checkout.session.completed', function () {
     $user = User::factory()->create();
     $cart = Cart::factory()->create(['user_id' => $user->id]);

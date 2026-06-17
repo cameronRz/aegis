@@ -62,15 +62,18 @@ class WebhookController extends Controller
 
     private function handleCheckoutCompleted(CheckoutSession $session): void
     {
-        $order = Order::with('items.product', 'user')
-            ->where('id', (int) $session->client_reference_id)
-            ->first();
+        $processedOrder = DB::transaction(function () use ($session): ?Order {
+            $order = Order::query()
+                ->where('id', (int) $session->client_reference_id)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $order || $order->status !== OrderStatus::Pending) {
-            return;
-        }
+            if (! $order || $order->status !== OrderStatus::Pending) {
+                return null;
+            }
 
-        DB::transaction(function () use ($order, $session): void {
+            $order->load('items.product', 'user');
+
             $order->update([
                 'status' => OrderStatus::Paid,
                 'stripe_payment_intent_id' => $session->payment_intent,
@@ -80,11 +83,7 @@ class WebhookController extends Controller
                 $this->createSubscriptionRecord($order, (string) $session->subscription);
             }
 
-            foreach ($order->items as $item) {
-                if ($item->product_id && $item->product?->track_inventory) {
-                    Product::where('id', $item->product_id)->decrement('stock_quantity', $item->quantity);
-                }
-            }
+            $this->decrementInventory($order);
 
             if ($order->user) {
                 $cart = Cart::where('user_id', $order->user->id)->first();
@@ -92,9 +91,53 @@ class WebhookController extends Controller
                     $this->cartService->clear($cart);
                 }
             }
-        });
 
-        OrderPaid::dispatch($order->fresh('items', 'user'));
+            return $order;
+        }, attempts: 5);
+
+        if (! $processedOrder) {
+            return;
+        }
+
+        OrderPaid::dispatch($processedOrder->fresh('items', 'user'));
+    }
+
+    private function decrementInventory(Order $order): void
+    {
+        $trackedItems = $order->items->filter(
+            fn ($item) => $item->product_id && $item->product?->track_inventory
+        );
+
+        if ($trackedItems->isEmpty()) {
+            return;
+        }
+
+        $products = Product::query()
+            ->whereIn('id', $trackedItems->pluck('product_id')->unique())
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        foreach ($trackedItems as $item) {
+            $product = $products->get($item->product_id);
+
+            if (! $product || $product->stock_quantity === null) {
+                continue;
+            }
+
+            $newStockQuantity = max(0, $product->stock_quantity - $item->quantity);
+
+            if ($newStockQuantity === 0 && $product->stock_quantity < $item->quantity) {
+                Log::channel('stripe')->warning('Checkout completed with insufficient inventory', [
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'stock_quantity' => $product->stock_quantity,
+                    'quantity' => $item->quantity,
+                ]);
+            }
+
+            $product->update(['stock_quantity' => $newStockQuantity]);
+        }
     }
 
     private function createSubscriptionRecord(Order $order, string $stripeSubscriptionId): void

@@ -32,13 +32,14 @@ The central model. Represents both admin-side staff and (eventually) client-side
 - `full_name` — computed: `"{first_name} {last_name}"`
 
 **Relationships:**
-- `roles()` → `BelongsToMany(Role, 'role_user')->withPivot('assigned_by')->withTimestamps()` — the user's RBAC roles (many-to-many); use `syncWithPivotValues()` to update
+- `roles()` → `BelongsToMany(Role, 'role_user')->withPivot('assigned_by')->withTimestamps()` — the user's RBAC roles (many-to-many)
 - Passkeys → managed by Fortify via `passkeys` table (user_id FK, cascade delete)
 
 **Key methods:**
 - `isAdmin(): bool` — returns `true` for `site_admin` and `admin` tiers; use this instead of inline `in_array($role, [...])` checks
 - `hasPermission(PermissionName $permission): bool` — returns `true` if user has the named permission. Calls `isAdmin()` first (short-circuits for admins), then loads `roles.permissions` and checks if any role's permissions contain the slug: `$this->loadMissing('roles.permissions')->roles->flatMap->permissions->pluck('name')->contains($permission->value)`. No roles assigned → `false`.
 - `assignableTiers(): Tier[]` — returns the Tier cases this user is allowed to assign to others. `site_admin` gets all tiers (`Tier::cases()`); everyone else gets `[Tier::User]`. Used by `UserController`, `StoreUserRequest`, and `UpdateUserRequest` — call `array_column($user->assignableTiers(), 'value')` to get string values for validation/view props.
+- `canAssignRole(Role $role): bool` — returns `true` if the user is allowed to assign the given role to others. Admins (`isAdmin()`) can assign any role. Non-admins can only assign roles whose permissions are all also held by themselves (no privilege escalation). Calls `$role->loadMissing('permissions')` internally so it's safe to call without pre-loading.
 
 **Fillable:** `first_name`, `last_name`, `email`, `password`, `stripe_customer_id` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
@@ -441,6 +442,27 @@ Registered in `AppServiceProvider::boot()` via `Product::observe(ProductObserver
 
 **`stripe_customer_id` on admin-created users:** `UserController::store()` also calls `StripeService::createCustomer()` after `User::create()`, following the same catch-log-continue pattern as `CreateNewUser`.
 
+### `WebhookController` — `checkout.session.completed` handling
+
+`handleCheckoutCompleted()` wraps everything in a **`DB::transaction(attempts: 5)`** with `lockForUpdate()` on the order row before any state mutation. This prevents double-processing when Stripe delivers the webhook more than once concurrently:
+
+1. Lock the `Order` row (`lockForUpdate()`) and re-check `status === OrderStatus::Pending` inside the transaction — returns `null` and early-exits if already processed.
+2. Load relations (`items.product`, `user`) after the lock (not before) to avoid stale reads.
+3. Marks order `Paid`, records `stripe_payment_intent_id`.
+4. Creates a `Subscription` record if `session->subscription` is set.
+5. Calls `decrementInventory($order)` (see below).
+6. Clears the user's cart.
+7. Returns the order from the transaction closure; `OrderPaid` is dispatched **outside** the transaction using the returned value.
+
+**`decrementInventory(Order $order)`** — private method extracted from the transaction closure:
+- Filters `$order->items` to those with `product_id` and `product->track_inventory === true`.
+- Locks all matching `Product` rows with a second `lockForUpdate()` query (bulk, not per-item) to prevent concurrent oversell.
+- Clamps each decrement to `max(0, stock_quantity - item->quantity)` — stock never goes negative.
+- Logs a `stripe` channel warning when `stock_quantity < item->quantity` (i.e. the order quantity exceeded available stock at the time of payment).
+- Skips products with `stock_quantity === null` (unlimited).
+
+**Idempotency rule:** always check `order->status !== Pending` *inside* the `lockForUpdate` transaction. Checking before the lock is a TOCTOU race condition.
+
 ---
 
 ## Database Tables
@@ -492,8 +514,9 @@ Shared validation traits (in `app/Http/Requests/Concerns/`):
 - `ProfileValidationRules` — `profileRules(?int $userId)` for first/last name and unique email
 
 Form requests:
-- `StoreUserRequest` — validates new user creation; uses `profileRules()` + `role` (validated against `assignableTiers()`) + `role_ids` (`['nullable', 'array']`, `role_ids.*` → `['integer', 'exists:roles,id']`)
-- `UpdateUserRequest` — same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so email uniqueness ignores the current user
+- `StoreUserRequest` — validates new user creation; uses `profileRules()` + `role` (validated against `assignableTiers()`) + `role_ids` (`['nullable', 'array']`, `role_ids.*` → `['integer', 'exists:roles,id']`). Uses `ValidatesAssignableRoles` trait to block privilege escalation in the `after()` hook.
+- `UpdateUserRequest` — same shape as `StoreUserRequest` but passes `$userId` to `profileRules()` so email uniqueness ignores the current user. The `after()` hook checks only *newly submitted* roles against `canAssignRole()` — roles the actor can't assign that are already on the user are excluded from the check (they are preserved in the controller, not stripped).
+- `ValidatesAssignableRoles` (`app/Concerns/ValidatesAssignableRoles.php`) — trait shared by form requests that validate `role_ids`. The `after()` hook rejects any submitted role where `!$this->user()->canAssignRole($role)`. `StoreUserRequest` uses this as-is (all submitted roles must be assignable). `UpdateUserRequest` has its own `after()` variant that also excludes roles already held by the target user.
 - `StoreRoleRequest` — validates `name` (required, unique on `roles`), `description` (nullable, max 1000), `permissions` (nullable array of permission IDs, `exists:permissions,id`)
 - `UpdateRoleRequest` — same as `StoreRoleRequest` but `name` uniqueness ignores the current role via `->ignore($this->route('role'))`
 - `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
@@ -532,9 +555,11 @@ The `Sortable` trait only fires on `creating`. On update, `ProductController::up
 - Route-level: `can:edit_user` / `can:delete_user` gates control access to routes
 - Controller-level: `$this->authorize('update', $user)` / `$this->authorize('delete', $user)` enforce per-model policy (e.g., admin can't edit another admin)
 - `show()` passes `canEdit`, `canDelete` as server-side Inertia props — computed via `Gate::allows()` AND `$viewer->can('update'/'delete', $user)` — so the frontend never re-derives these.
-- `create()` / `edit()` pass `roles` (all available RBAC roles) and `selectedRoleIds` (array of currently assigned role IDs) to the view. Role assignment syncs via `$user->roles()->syncWithPivotValues($roleIds, ['assigned_by' => auth()->id()])`.
+- `create()` / `edit()` pass `roles` (only roles the viewer can assign via `$viewer->canAssignRole($role)`) and `selectedRoleIds` (array of currently assigned role IDs) to the view.
 - `show()` loads `roles.permissions` for display.
 - `AuthorizesRequests` trait is on the base `Controller` class — required for `$this->authorize()` to exist (Laravel 12+ omits it by default)
+- **Role sync on update (privilege-escalation prevention):** `update()` never does a plain sync. It first collects the target user's *existing* roles that the actor cannot assign (`$preservedRolePayload`), then merges in the *submitted* roles (actor-assignable only). The union is passed to `$user->roles()->sync()`. This means: a non-admin cannot strip a higher-privilege role assigned by a site-admin, and cannot add a role beyond their own permissions. The `assigned_by` pivot value is preserved for existing entries and set to the current actor for newly assigned ones.
+- **Bulk assign security check:** `bulkAssignRoles()` loads the requested roles and checks each with `$viewer->canAssignRole()` before proceeding; returns a validation error if any role exceeds the actor's permissions.
 
 Password rules differ by environment: production requires 12+ chars, mixed case, numbers, symbols, not compromised.
 
@@ -634,22 +659,36 @@ String-backed: `User = 'user'`, `Assistant = 'assistant'`.
 
 **Factory:** `AiMessageFactory` — state: `assistant()`
 
+### `StoreDocumentRequest` (`app/Http/Requests/StoreDocumentRequest.php`)
+
+Validates admin document uploads. Rules: `title` (required string, max 255), `file` (required file, `mimes:pdf,txt`, **`mimetypes:application/pdf,text/plain`**, max 10 240 KB).
+
+The `mimetypes` rule is required in addition to `mimes` — `mimes` validates the file extension only, while `mimetypes` inspects the actual MIME type from the file content. Together they block extension spoofing (e.g. a binary disguised as `.txt`).
+
 ### `ProcessDocumentJob` (`app/Jobs/ProcessDocumentJob.php`)
 
 Queued (`ShouldQueue`). Dispatched by `DocumentObserver::created()`.
 
 **Constructor:** `public readonly Document $document`
 
+**Queue configuration:**
+- `$tries = 2`, `$timeout = 120`
+- `backoff(): [30, 120]` — 30s then 2min between retries
+- `MAX_EXTRACTED_CHARACTERS = 100_000` — extracted text is truncated to this before chunking (prevents runaway memory/cost on huge files)
+- `MAX_CHUNKS = 50` — chunk array sliced to this limit before embedding (caps API calls and DB rows per document)
+
 **`handle(ClientContract $client)`** — method-injected; `ClientContract` is bound as singleton in `AppServiceProvider`.
 
 **Logic:**
 1. Extract text: PDF → `smalot/pdfparser`; TXT → `Storage::disk('local')->get()`
-2. Split into ~2000-char chunks with ~400-char overlap
-3. Per chunk: embed via OpenAI `text-embedding-3-small`, raw INSERT with `DB::statement()` for the vector column
-4. On success: `$document->update(['status' => DocumentStatus::Ready])`
-5. `failed(Throwable)` hook: `$document->update(['status' => DocumentStatus::Failed])`
+2. Truncate to `MAX_EXTRACTED_CHARACTERS`
+3. Split into ~2000-char chunks with ~400-char overlap
+4. Slice chunks to `MAX_CHUNKS`
+5. Per chunk: embed via OpenAI `text-embedding-3-small`, raw INSERT with `DB::statement()` for the vector column
+6. On success: `$document->update(['status' => DocumentStatus::Ready])`
+7. `failed(Throwable)` hook: `$document->update(['status' => DocumentStatus::Failed])`
 
-**Testing:** `Queue::fake()` before `Document::factory()->create()` (observer dispatches synchronously on sync queue). Set `$this->app->instance(ClientContract::class, $fakeClient)` before calling `app()->call([$job, 'handle'])`.
+**Testing:** `Queue::fake()` before `Document::factory()->create()` (observer dispatches synchronously on sync queue). Set `$this->app->instance(ClientContract::class, $fakeClient)` before calling `app()->call([$job, 'handle'])`. Use `ProcessDocumentJob::MAX_CHUNKS` in test assertions rather than hardcoding the number.
 
 ### `DocumentObserver` (`app/Observers/DocumentObserver.php`)
 
