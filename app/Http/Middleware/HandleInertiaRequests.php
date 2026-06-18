@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enum\SettingKey;
 use App\Models\AppSetting;
 use App\Models\Permission;
+use App\Models\SupportMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
@@ -59,6 +60,25 @@ class HandleInertiaRequests extends Middleware
                 'aiAssistantEnabled' => AppSetting::get(SettingKey::AiAssistantEnabled, true),
                 'supportChatEnabled' => AppSetting::get(SettingKey::SupportChatEnabled, true),
             ],
+            'unreadSupportCount' => function () use ($request): int {
+                $user = $request->user();
+                if (! $user) {
+                    return 0;
+                }
+                if ($user->can('handle_support')) {
+                    return SupportMessage::whereNull('read_at')
+                        ->where('sender_id', '!=', $user->id)
+                        ->count();
+                }
+                if ($user->can('use_support')) {
+                    return SupportMessage::whereHas('conversation', fn ($q) => $q->where('user_id', $user->id))
+                        ->whereNull('read_at')
+                        ->where('sender_id', '!=', $user->id)
+                        ->count();
+                }
+
+                return 0;
+            },
         ];
     }
 }

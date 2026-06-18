@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\DocumentController as AdminDocumentController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\SupportConversationController as AdminSupportConversationController;
 use App\Http\Controllers\AiConversationController;
 use App\Http\Controllers\AiMessageController;
 use App\Http\Controllers\BillingPortalController;
@@ -16,6 +17,8 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SupportConversationController;
+use App\Http\Controllers\SupportMessageController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +58,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ai', [AiConversationController::class, 'index'])->name('ai.index');
     Route::post('ai/conversations', [AiConversationController::class, 'store'])->name('ai.conversations.store');
     Route::post('ai/message', [AiMessageController::class, 'store'])->name('ai.messages.store');
+
+    // Support — literal /support/conversations before parametric routes
+    Route::middleware('can:use_support')->group(function () {
+        Route::get('support', [SupportConversationController::class, 'index'])->name('support.index');
+        Route::post('support/conversations', [SupportConversationController::class, 'store'])->name('support.conversations.store');
+    });
+    Route::get('support/conversations/{conversation}', [SupportConversationController::class, 'show'])->name('support.conversations.show');
+    Route::post('support/conversations/{conversation}/messages', [SupportMessageController::class, 'store'])->name('support.messages.store');
 
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');
@@ -183,6 +194,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
             Route::post('invitations/{invitation}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
             Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
+        });
+
+        // Support (agent)
+        Route::middleware('can:handle_support')->group(function () {
+            Route::get('support', [AdminSupportConversationController::class, 'index'])->name('support.index');
+            Route::get('support/{conversation}', [AdminSupportConversationController::class, 'show'])->name('support.show');
+            Route::post('support/{conversation}/close', [AdminSupportConversationController::class, 'close'])->name('support.close');
         });
 
         // Settings — admin only
