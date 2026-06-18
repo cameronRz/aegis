@@ -14,7 +14,7 @@ class SupportConversationController extends Controller
 {
     public function index(): Response
     {
-        $conversations = SupportConversation::with('client:id,first_name,last_name,full_name')
+        $conversations = SupportConversation::with('client:id,first_name,last_name')
             ->withCount(['messages as unread_count' => function ($query) {
                 $query->whereNull('read_at');
             }])
@@ -34,9 +34,9 @@ class SupportConversationController extends Controller
             ->update(['read_at' => now()]);
 
         $conversation->load([
-            'messages.sender:id,first_name,last_name,full_name',
-            'client:id,first_name,last_name,full_name',
-            'agent:id,first_name,last_name,full_name',
+            'messages.sender:id,first_name,last_name',
+            'client:id,first_name,last_name',
+            'agent:id,first_name,last_name',
         ]);
 
         return Inertia::render('admin/support/show', [

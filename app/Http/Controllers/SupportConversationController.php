@@ -19,7 +19,7 @@ class SupportConversationController extends Controller
         abort_unless(AppSetting::get(SettingKey::SupportChatEnabled, true), 503);
 
         $conversation = SupportConversation::forUser($request->user())
-            ->with(['messages.sender:id,first_name,last_name,full_name'])
+            ->with(['messages.sender:id,first_name,last_name'])
             ->latest('last_message_at')
             ->first();
 
@@ -63,7 +63,7 @@ class SupportConversationController extends Controller
             ->where('sender_id', '!=', $request->user()->id)
             ->update(['read_at' => now()]);
 
-        $conversation->load(['messages.sender:id,first_name,last_name,full_name']);
+        $conversation->load(['messages.sender:id,first_name,last_name']);
 
         return Inertia::render('support/index', [
             'conversation' => $conversation,

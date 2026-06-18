@@ -243,3 +243,29 @@ export type AiMessage = {
     created_at: string;
     updated_at: string;
 };
+
+export type ConversationStatus = 'open' | 'closed';
+
+export type SupportMessage = {
+    id: number;
+    conversation_id: number;
+    sender_id: number;
+    content: string;
+    read_at: string | null;
+    sender?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'>;
+    created_at: string;
+    updated_at: string;
+};
+
+export type SupportConversation = {
+    id: number;
+    user_id: number;
+    agent_id: number | null;
+    status: ConversationStatus;
+    last_message_at: string | null;
+    client?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'>;
+    agent?: Pick<User, 'id' | 'first_name' | 'last_name' | 'full_name'> | null;
+    messages?: SupportMessage[];
+    created_at: string;
+    updated_at: string;
+};

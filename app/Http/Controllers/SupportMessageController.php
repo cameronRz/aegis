@@ -33,7 +33,7 @@ class SupportMessageController extends Controller
             'content' => $validated['content'],
         ]);
 
-        $message->load('sender:id,first_name,last_name,full_name');
+        $message->load('sender:id,first_name,last_name');
 
         $conversation->last_message_at = now();
 
