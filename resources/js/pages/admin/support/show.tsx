@@ -75,7 +75,7 @@ export default function AdminSupportShow({ conversation }: Props) {
     useEffect(() => {
         const channel = window.Echo.private(`conversation.${conversation.id}`);
 
-        channel.listen('.NewSupportMessage', (msg: SupportMessage) => {
+        channel.listen('NewSupportMessage', (msg: SupportMessage) => {
             setMessages((prev) => [...prev, msg]);
         });
 
