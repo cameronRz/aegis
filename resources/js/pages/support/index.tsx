@@ -161,7 +161,7 @@ export default function SupportIndex({ conversation }: Props) {
                     </Button>
                 </div>
             ) : (
-                <div className="flex h-full flex-1 flex-col overflow-hidden">
+                <div className="mx-auto flex h-[calc(100svh-4rem)] w-full max-w-3xl flex-col overflow-hidden">
                     {isClosed && (
                         <div className="bg-muted/50 shrink-0 border-b px-4 py-2 text-center text-sm text-muted-foreground">
                             This conversation has been closed.

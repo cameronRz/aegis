@@ -157,7 +157,7 @@ export default function AdminSupportShow({ conversation }: Props) {
     return (
         <>
             <Head title={`Support — ${conversation.client.full_name}`} />
-            <div className="flex h-full flex-1 flex-col overflow-hidden">
+            <div className="mx-auto flex h-[calc(100svh-4rem)] w-full max-w-3xl flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
                     <div className="flex items-center gap-3">
