@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, LayoutGrid, Package, Receipt, RefreshCcw, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
+import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, HeadphonesIcon, LayoutGrid, Package, Receipt, RefreshCcw, Settings2, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,7 +14,6 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { cart as cartRoute, dashboard, orders as ordersRoute, shop as shopRoute, subscriptions as subscriptionsRoute } from '@/routes';
-import { index as aiRoute } from '@/routes/ai';
 import {
     categories as adminCategoriesRoute,
     documents as adminDocumentsRoute,
@@ -24,7 +23,11 @@ import {
     products as adminProductsRoute,
     users as adminUsersRoute,
 } from '@/routes/admin';
+import { index as adminSupportRoute } from '@/routes/admin/support';
+import { index as aiRoute } from '@/routes/ai';
+import { index as supportRoute } from '@/routes/support';
 import type { NavItem } from '@/types';
+import type { Features } from '@/types/auth';
 
 const footerNavItems: NavItem[] = [
     {
@@ -39,7 +42,7 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
-function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
+function ALL_NAV_ITEMS(cartItemCount: number, unreadSupportCount: number): NavItem[] {
     return [
         {
             title: 'Dashboard',
@@ -51,6 +54,7 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             href: aiRoute.url(),
             icon: Bot,
             permission: 'use_ai_assistant',
+            featureFlag: 'aiAssistantEnabled',
         },
         {
             title: 'Shop',
@@ -75,6 +79,13 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             title: 'Subscriptions',
             href: subscriptionsRoute.url(),
             icon: RefreshCcw,
+        },
+        {
+            title: 'Support',
+            href: supportRoute.url(),
+            icon: HeadphonesIcon,
+            permission: 'use_support',
+            featureFlag: 'supportChatEnabled',
         },
         {
             title: 'Users',
@@ -107,6 +118,13 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             permission: 'admin',
         },
         {
+            title: 'Support',
+            href: adminSupportRoute.url(),
+            icon: HeadphonesIcon,
+            permission: 'handle_support',
+            badge: unreadSupportCount || undefined,
+        },
+        {
             title: 'Invitations',
             href: adminInvitationsRoute.url(),
             icon: UserPlus,
@@ -118,14 +136,27 @@ function ALL_NAV_ITEMS(cartItemCount: number): NavItem[] {
             icon: ShieldCheck,
             permission: 'admin',
         },
+        {
+            title: 'Settings',
+            href: '/admin/settings/features',
+            icon: Settings2,
+            permission: 'admin',
+        },
     ];
 }
 
 export function AppSidebar() {
-    const { auth, cartItemCount } = usePage<{ auth: { can: Record<string, boolean> }; cartItemCount: number }>().props;
+    const { auth, cartItemCount, unreadSupportCount, features } = usePage<{
+        auth: { can: Record<string, boolean> };
+        cartItemCount: number;
+        unreadSupportCount: number;
+        features: Features;
+    }>().props;
 
-    const mainNavItems = ALL_NAV_ITEMS(cartItemCount).filter(
-        (item) => !item.permission || auth.can[item.permission],
+    const mainNavItems = ALL_NAV_ITEMS(cartItemCount, unreadSupportCount).filter(
+        (item) =>
+            (!item.permission || auth.can[item.permission]) &&
+            (!item.featureFlag || features[item.featureFlag]),
     );
 
     return (

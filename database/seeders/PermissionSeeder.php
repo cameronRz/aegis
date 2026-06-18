@@ -81,6 +81,18 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Use AI Assistant',
                 'description' => 'Access the AI assistant chat.',
             ],
+
+            // Support
+            [
+                'name' => 'use_support',
+                'display_name' => 'Use Support Chat',
+                'description' => 'Open and send messages in support conversations.',
+            ],
+            [
+                'name' => 'handle_support',
+                'display_name' => 'Handle Support',
+                'description' => 'View and respond to client support conversations.',
+            ],
         ];
 
         foreach ($permissions as $permission) {

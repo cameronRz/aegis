@@ -23,4 +23,8 @@ enum PermissionName: string
 
     // AI
     case UseAiAssistant = 'use_ai_assistant';
+
+    // Support
+    case UseSupport = 'use_support';
+    case HandleSupport = 'handle_support';
 }

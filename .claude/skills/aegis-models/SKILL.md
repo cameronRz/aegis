@@ -8,6 +8,10 @@ metadata:
 
 # Aegis — Domain Models & Backend
 
+## Model Authoring Conventions
+
+- **`#[Fillable]` attribute over `$fillable` array** — declare mass-assignable columns with `#[Fillable(['col1', 'col2'])]` on the class, not a `protected $fillable = [...]` property. Use `#[Cast(['col' => SomeEnum::class])]` the same way instead of `protected $casts`. This is the Laravel 12+ PHP-attribute style; apply it to all new and edited models.
+
 ## User Model
 
 The central model. Represents both admin-side staff and (eventually) client-side end users, differentiated by `role`.

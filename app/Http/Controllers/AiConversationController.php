@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enum\SettingKey;
 use App\Models\AiConversation;
+use App\Models\AppSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,6 +14,7 @@ class AiConversationController extends Controller
 {
     public function index(Request $request): Response
     {
+        abort_unless(AppSetting::get(SettingKey::AiAssistantEnabled, true), 503);
         $this->authorize('use_ai_assistant');
 
         $conversation = AiConversation::where('user_id', $request->user()->id)
@@ -29,6 +32,7 @@ class AiConversationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(AppSetting::get(SettingKey::AiAssistantEnabled, true), 503);
         $this->authorize('use_ai_assistant');
 
         AiConversation::create(['user_id' => $request->user()->id]);

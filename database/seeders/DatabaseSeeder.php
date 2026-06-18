@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enum\PermissionName;
+use App\Enum\SettingKey;
 use App\Enum\Tier;
+use App\Models\AppSetting;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -52,13 +54,21 @@ class DatabaseSeeder extends Seeder
         User::factory(5)->create(['tier' => Tier::Admin]);
         User::factory(120)->create();
 
+        // Feature flags
+        AppSetting::set(SettingKey::AiAssistantEnabled, true);
+        AppSetting::set(SettingKey::SupportChatEnabled, true);
+
         // Permissions
         $this->call(PermissionSeeder::class);
 
-        // Create a default Client role with AI access and assign to all Tier::User users
-        $aiPermission = Permission::where('name', PermissionName::UseAiAssistant->value)->first();
-        $clientRole = Role::create(['name' => 'Client', 'description' => 'Default role for client users. Grants AI Assistant access.']);
-        $clientRole->permissions()->attach($aiPermission->id);
+        // Create a default Client role with AI + support access and assign to all Tier::User users
+        $clientRole = Role::create(['name' => 'Client', 'description' => 'Default role for client users. Grants AI Assistant and Support Chat access.']);
+        $clientRole->permissions()->attach(
+            Permission::whereIn('name', [
+                PermissionName::UseAiAssistant->value,
+                PermissionName::UseSupport->value,
+            ])->pluck('id')
+        );
 
         $userIds = User::where('tier', Tier::User->value)->pluck('id');
         $now = now();
