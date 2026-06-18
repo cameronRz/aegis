@@ -119,7 +119,7 @@ function ALL_NAV_ITEMS(cartItemCount: number, unreadSupportCount: number): NavIt
             permission: 'admin',
         },
         {
-            title: 'Support',
+            title: 'Support Queue',
             href: adminSupportRoute.url(),
             icon: HeadphonesIcon,
             permission: 'handle_support',
