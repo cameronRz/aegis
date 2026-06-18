@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Route;
 use OpenAI\Contracts\ClientContract;
 use OpenAI\Responses\Chat\CreateStreamedResponse;
 use OpenAI\Responses\Embeddings\CreateResponse as EmbeddingCreateResponse;
@@ -163,4 +164,12 @@ test('SSE stream output includes sources event followed by delta events', functi
     expect($content)->toContain('data: ');
     expect($content)->toContain('"type":"sources"');
     expect($content)->toContain('[DONE]');
+});
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+
+test('ai message endpoint is rate limited to 30 requests per minute', function () {
+    $route = Route::getRoutes()->getByName('ai.messages.store');
+
+    expect($route->middleware())->toContain('throttle:30,1');
 });

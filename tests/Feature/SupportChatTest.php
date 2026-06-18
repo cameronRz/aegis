@@ -11,6 +11,7 @@ use App\Models\SupportConversation;
 use App\Models\SupportMessage;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 
 use function Pest\Laravel\actingAs;
 
@@ -364,4 +365,12 @@ test('closing an already-closed conversation is idempotent', function () {
         ->assertRedirect();
 
     expect($conversation->fresh()->status)->toBe(ConversationStatus::Closed);
+});
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+
+test('support message endpoint is rate limited to 60 requests per minute', function () {
+    $route = Route::getRoutes()->getByName('support.messages.store');
+
+    expect($route->middleware())->toContain('throttle:60,1');
 });
