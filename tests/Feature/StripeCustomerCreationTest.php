@@ -7,6 +7,8 @@ use Mockery\MockInterface;
 use Stripe\Customer;
 use Stripe\Exception\ApiErrorException;
 
+use function Pest\Laravel\actingAs;
+
 beforeEach(function () {
     $this->validInput = [
         'first_name' => 'Jane',
@@ -44,4 +46,14 @@ it('does not block registration when stripe customer creation fails', function (
 
 it('creates a stripe customer lazily at checkout if stripe_customer_id is null', function () {
     expect(User::factory()->create(['stripe_customer_id' => null])->stripe_customer_id)->toBeNull();
+});
+
+it('stripe_customer_id is not exposed in the shared auth.user Inertia prop', function () {
+    $this->withoutVite();
+
+    $user = User::factory()->create(['stripe_customer_id' => 'cus_secret123']);
+
+    actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->missing('auth.user.stripe_customer_id'));
 });

@@ -87,7 +87,16 @@ DELETE /admin/documents/{document}                          → admin.documents.
 
 GET    /ai                                                  → ai.index                              (auth + verified; authorize('use_ai_assistant') in controller)
 POST   /ai/conversations                                    → ai.conversations.store                (auth + verified; authorize('use_ai_assistant') in controller)
-POST   /ai/message                                          → ai.messages.store                     (auth + verified; authorize('use_ai_assistant') in controller) — returns SSE StreamedResponse
+POST   /ai/message                                          → ai.messages.store                     (auth + verified; authorize('use_ai_assistant') in controller; throttle:30,1) — returns SSE StreamedResponse
+
+GET  /support                                               → support.index                         (can:use_support)
+POST /support/conversations                                 → support.conversations.store           (can:use_support)
+GET  /support/conversations/{conversation}                  → support.conversations.show            (can:support_participant)
+POST /support/conversations/{conversation}/messages         → support.messages.store                (can:support_participant; throttle:60,1)
+
+GET  /admin/support                                         → admin.support.index                   (can:handle_support)
+GET  /admin/support/{conversation}                          → admin.support.show                    (can:handle_support)
+POST /admin/support/{conversation}/close                    → admin.support.close                   (can:handle_support)
 
 GET  /invitations/{token}                                   → invitations.show                      (public — token validates; 404 if not found/accepted, 410 if expired)
 POST /invitations/{token}                                   → invitations.accept                    (public — creates user, logs them in, redirects to /dashboard)

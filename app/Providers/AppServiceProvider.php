@@ -57,7 +57,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Derived routing guard — not a DB permission. Grants route access to anyone with either support role.
-        Gate::define('support_participant', fn (User $user): bool => $user->hasPermission(PermissionName::UseSupport) || $user->hasPermission(PermissionName::HandleSupport)
+        Gate::define(
+            'support_participant',
+            fn (User $user): bool => $user->hasPermission(PermissionName::UseSupport)
+                || $user->hasPermission(PermissionName::HandleSupport)
         );
     }
 

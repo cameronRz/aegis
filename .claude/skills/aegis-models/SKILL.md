@@ -47,6 +47,8 @@ The central model. Represents both admin-side staff and (eventually) client-side
 
 **Fillable:** `first_name`, `last_name`, `email`, `password`, `stripe_customer_id` — `role` and `email_verified_at` are intentionally NOT fillable; set them directly on the model instance after create to prevent mass assignment escalation.
 
+**Hidden (`#[Hidden]`):** `password`, `two_factor_secret`, `two_factor_recovery_codes`, `remember_token`, `stripe_customer_id` — excluded from all JSON serialization including the shared Inertia `auth.user` prop.
+
 **Traits:** `HasFactory`, `Notifiable`, `PasskeyAuthenticatable`, `SoftDeletes`, `TwoFactorAuthenticatable`
 
 **Soft delete cleanup (`booted()`):** on `deleting()`, deletes the user's `passkeys` and any rows in `sessions` for `user_id` (invalidates active sessions and blocks re-auth). The `role_user` pivot rows cascade-delete automatically. The `tier` column is a plain `string` cast to `Tier` (not a Postgres enum). The DB column and TS type are both named `tier` — not `role`. Factories and tests must use `['tier' => Tier::Admin]`, not `['role' => 'admin']`.
@@ -525,7 +527,7 @@ Form requests:
 - `UpdateRoleRequest` — same as `StoreRoleRequest` but `name` uniqueness ignores the current role via `->ignore($this->route('role'))`
 - `StoreCategoryRequest` — validates `name` (required string), `slug` (required, unique, lowercase-kebab regex), `parent_id` (nullable FK → categories), `is_active` (boolean). `sort_order` is intentionally excluded — auto-assigned by the `Sortable` trait.
 - `UpdateCategoryRequest` — same rules as `StoreCategoryRequest` except the slug uniqueness check ignores the current category via `Rule::unique('categories', 'slug')->ignore($this->route('category'))`.
-- `StoreProductRequest` — validates `name`, `sku` (unique), `description`, `category_id` (nullable FK), `type` (enum), `is_active`, `price` (integer cents), `price_type` (enum), `billing_interval` + `billing_interval_count` (required when `type = subscription`, via `Rule::requiredIf`), `trial_period_days` (nullable int), `track_inventory`, `stock_quantity` (required when `track_inventory = true`), `image` (nullable image file, max 2 MB). `sort_order` excluded — auto-assigned scoped to `category_id`.
+- `StoreProductRequest` — validates `name`, `sku` (unique), `description`, `category_id` (nullable FK), `type` (enum), `is_active`, `price` (integer cents), `price_type` (enum), `billing_interval` + `billing_interval_count` (required when `type = subscription`, via `Rule::requiredIf`), `trial_period_days` (nullable int), `track_inventory`, `stock_quantity` (required when `track_inventory = true`), `image` (nullable; `image` + `mimes:jpg,jpeg,png,gif,webp` + `mimetypes:image/jpeg,image/png,image/gif,image/webp`, max 2 MB — both rules required per project convention: `mimes` checks extension, `mimetypes` checks file content to block extension spoofing). `sort_order` excluded — auto-assigned scoped to `category_id`.
 - `UpdateProductRequest` — same rules as `StoreProductRequest` except: SKU uniqueness ignores the current product via `Rule::unique()->ignore($this->route('product'))`; adds `remove_image` (boolean). `sort_order` excluded — controller resets it to end of new category when `category_id` changes, otherwise preserves it.
 
 ### Delete / Trash / Restore behaviour
