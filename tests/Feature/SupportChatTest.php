@@ -11,6 +11,7 @@ use App\Models\SupportConversation;
 use App\Models\SupportMessage;
 use App\Models\User;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 
 use function Pest\Laravel\actingAs;
 
@@ -185,6 +186,57 @@ test('message store returns 503 when support chat is disabled', function () {
         ->assertStatus(503);
 });
 
+// ── 1.1 Conversation ownership tests ─────────────────────────────────────────
+
+test('client cannot post a message to another clients conversation', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->otherClient->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    actingAs($this->client)
+        ->post(route('support.messages.store', $conversation), ['content' => 'Hi'])
+        ->assertForbidden();
+});
+
+test('agent can post a message to any conversation', function () {
+    Event::fake();
+
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    actingAs($this->agent)
+        ->post(route('support.messages.store', $conversation), ['content' => 'Agent reply'])
+        ->assertRedirect();
+
+    expect(SupportMessage::where('conversation_id', $conversation->id)->exists())->toBeTrue();
+});
+
+// ── 1.2 Route-level middleware tests ─────────────────────────────────────────
+
+test('user without support permission gets 403 on conversation show', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    actingAs($this->noPermUser)
+        ->get(route('support.conversations.show', $conversation))
+        ->assertForbidden();
+});
+
+test('unauthenticated user is redirected from conversation show', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    $this->get(route('support.conversations.show', $conversation))
+        ->assertRedirect(route('login'));
+});
+
 // ── 6.4 Authorization tests ───────────────────────────────────────────────────
 
 test('user without handle_support gets 403 on admin support index', function () {
@@ -313,4 +365,12 @@ test('closing an already-closed conversation is idempotent', function () {
         ->assertRedirect();
 
     expect($conversation->fresh()->status)->toBe(ConversationStatus::Closed);
+});
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+
+test('support message endpoint is rate limited to 60 requests per minute', function () {
+    $route = Route::getRoutes()->getByName('support.messages.store');
+
+    expect($route->middleware())->toContain('throttle:60,1');
 });

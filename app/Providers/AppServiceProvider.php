@@ -55,6 +55,13 @@ class AppServiceProvider extends ServiceProvider
         foreach (PermissionName::cases() as $permission) {
             Gate::define($permission->value, fn (User $user) => $user->hasPermission($permission));
         }
+
+        // Derived routing guard — not a DB permission. Grants route access to anyone with either support role.
+        Gate::define(
+            'support_participant',
+            fn (User $user): bool => $user->hasPermission(PermissionName::UseSupport)
+                || $user->hasPermission(PermissionName::HandleSupport)
+        );
     }
 
     /**

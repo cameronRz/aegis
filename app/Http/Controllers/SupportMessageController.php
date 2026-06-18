@@ -21,6 +21,10 @@ class SupportMessageController extends Controller
         $canHandle = $request->user()->can('handle_support');
         abort_unless($canUse || $canHandle, 403);
 
+        if ($canUse && ! $canHandle) {
+            abort_unless($conversation->user_id === $request->user()->id, 403);
+        }
+
         abort_if($conversation->status === ConversationStatus::Closed, 422, 'This conversation is closed.');
 
         $validated = $request->validate([

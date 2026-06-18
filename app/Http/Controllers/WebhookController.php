@@ -142,7 +142,11 @@ class WebhookController extends Controller
 
     private function createSubscriptionRecord(Order $order, string $stripeSubscriptionId): void
     {
-        if (Subscription::where('stripe_subscription_id', $stripeSubscriptionId)->exists()) {
+        $existing = Subscription::where('stripe_subscription_id', $stripeSubscriptionId)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existing) {
             return;
         }
 
@@ -189,17 +193,21 @@ class WebhookController extends Controller
             return;
         }
 
-        $subscription = Subscription::where('stripe_subscription_id', $invoice->subscription)->first();
+        DB::transaction(function () use ($invoice): void {
+            $subscription = Subscription::where('stripe_subscription_id', $invoice->subscription)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $subscription) {
-            return;
-        }
+            if (! $subscription) {
+                return;
+            }
 
-        $subscription->update([
-            'status' => SubscriptionStatus::Active->value,
-            'current_period_start' => Carbon::createFromTimestamp($invoice->period_start),
-            'current_period_end' => Carbon::createFromTimestamp($invoice->period_end),
-        ]);
+            $subscription->update([
+                'status' => SubscriptionStatus::Active->value,
+                'current_period_start' => Carbon::createFromTimestamp($invoice->period_start),
+                'current_period_end' => Carbon::createFromTimestamp($invoice->period_end),
+            ]);
+        });
     }
 
     private function handleInvoicePaymentFailed(Invoice $invoice): void
@@ -215,27 +223,39 @@ class WebhookController extends Controller
 
     private function handleSubscriptionUpdated(StripeSubscription $stripeSub): void
     {
-        $subscription = Subscription::where('stripe_subscription_id', $stripeSub->id)->first();
+        DB::transaction(function () use ($stripeSub): void {
+            $subscription = Subscription::where('stripe_subscription_id', $stripeSub->id)
+                ->lockForUpdate()
+                ->first();
 
-        if (! $subscription) {
-            return;
-        }
+            if (! $subscription) {
+                return;
+            }
 
-        $subscription->update([
-            'status' => $stripeSub->status,
-            'current_period_end' => Carbon::createFromTimestamp($stripeSub->current_period_end),
-            'cancel_at_period_end' => (bool) $stripeSub->cancel_at_period_end,
-        ]);
+            $subscription->update([
+                'status' => $stripeSub->status,
+                'current_period_end' => Carbon::createFromTimestamp($stripeSub->current_period_end),
+                'cancel_at_period_end' => (bool) $stripeSub->cancel_at_period_end,
+            ]);
+        });
     }
 
     private function handleSubscriptionDeleted(StripeSubscription $stripeSub): void
     {
-        $subscription = Subscription::where('stripe_subscription_id', $stripeSub->id)->first();
+        DB::transaction(function () use ($stripeSub): void {
+            $subscription = Subscription::where('stripe_subscription_id', $stripeSub->id)
+                ->lockForUpdate()
+                ->first();
 
-        $subscription?->update([
-            'status' => SubscriptionStatus::Canceled->value,
-            'canceled_at' => now(),
-        ]);
+            if (! $subscription) {
+                return;
+            }
+
+            $subscription->update([
+                'status' => SubscriptionStatus::Canceled->value,
+                'canceled_at' => now(),
+            ]);
+        });
     }
 
     private function handleChargeRefunded(object $charge): void
@@ -244,8 +264,16 @@ class WebhookController extends Controller
             return;
         }
 
-        $order = Order::where('stripe_payment_intent_id', $charge->payment_intent)->first();
+        DB::transaction(function () use ($charge): void {
+            $order = Order::where('stripe_payment_intent_id', $charge->payment_intent)
+                ->lockForUpdate()
+                ->first();
 
-        $order?->update(['status' => OrderStatus::Refunded]);
+            if (! $order) {
+                return;
+            }
+
+            $order->update(['status' => OrderStatus::Refunded]);
+        });
     }
 }

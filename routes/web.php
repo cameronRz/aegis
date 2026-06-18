@@ -57,15 +57,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // AI Assistant
     Route::get('ai', [AiConversationController::class, 'index'])->name('ai.index');
     Route::post('ai/conversations', [AiConversationController::class, 'store'])->name('ai.conversations.store');
-    Route::post('ai/message', [AiMessageController::class, 'store'])->name('ai.messages.store');
+    Route::post('ai/message', [AiMessageController::class, 'store'])->name('ai.messages.store')->middleware('throttle:30,1');
 
     // Support — literal /support/conversations before parametric routes
     Route::middleware('can:use_support')->group(function () {
         Route::get('support', [SupportConversationController::class, 'index'])->name('support.index');
         Route::post('support/conversations', [SupportConversationController::class, 'store'])->name('support.conversations.store');
     });
-    Route::get('support/conversations/{conversation}', [SupportConversationController::class, 'show'])->name('support.conversations.show');
-    Route::post('support/conversations/{conversation}/messages', [SupportMessageController::class, 'store'])->name('support.messages.store');
+    // show + messages accessible to clients (use_support) and agents (handle_support)
+    Route::middleware('can:support_participant')->group(function () {
+        Route::get('support/conversations/{conversation}', [SupportConversationController::class, 'show'])->name('support.conversations.show');
+        Route::post('support/conversations/{conversation}/messages', [SupportMessageController::class, 'store'])->name('support.messages.store')->middleware('throttle:60,1');
+    });
 
     // Cart — literal /cart/items before parametric /cart/{...}
     Route::get('cart', [CartController::class, 'show'])->name('cart');

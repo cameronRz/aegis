@@ -47,7 +47,7 @@ trait ProductValidationRules
                 'integer',
                 'min:0',
             ],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:2048'],
         ];
     }
 }

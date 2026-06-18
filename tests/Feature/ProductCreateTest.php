@@ -195,3 +195,11 @@ it('rejects non-image file uploads', function () {
         ]))
         ->assertSessionHasErrors('image');
 });
+
+it('rejects files with image extension but non-image MIME type', function () {
+    actingAs($this->admin)
+        ->post('/admin/products', validProductPayload([
+            'image' => UploadedFile::fake()->create('evil.jpg', 100, 'application/pdf'),
+        ]))
+        ->assertSessionHasErrors('image');
+});
