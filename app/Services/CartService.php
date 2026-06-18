@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class CartService
 {
@@ -34,25 +35,30 @@ class CartService
             throw CartException::subscriptionQuantityExceeded();
         }
 
-        if ($product->track_inventory && $product->stock_quantity !== null && $product->stock_quantity < $newQuantity) {
-            throw CartException::insufficientStock($product->stock_quantity);
-        }
+        return DB::transaction(function () use ($cart, $product, $existingItem, $quantity, $newQuantity): CartItem {
+            if ($product->track_inventory) {
+                $locked = Product::where('id', $product->id)->lockForUpdate()->first();
+                if ($locked->stock_quantity !== null && $locked->stock_quantity < $newQuantity) {
+                    throw CartException::insufficientStock($locked->stock_quantity);
+                }
+            }
 
-        if ($existingItem) {
-            $existingItem->update(['quantity' => $newQuantity]);
+            if ($existingItem) {
+                $existingItem->update(['quantity' => $newQuantity]);
+                $this->syncCartCount($cart);
+
+                return $existingItem->fresh();
+            }
+
+            $item = $cart->items()->create([
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+            ]);
+
             $this->syncCartCount($cart);
 
-            return $existingItem->fresh();
-        }
-
-        $item = $cart->items()->create([
-            'product_id' => $product->id,
-            'quantity' => $quantity,
-        ]);
-
-        $this->syncCartCount($cart);
-
-        return $item;
+            return $item;
+        });
     }
 
     public function updateQuantity(CartItem $item, int $quantity): CartItem
@@ -67,15 +73,20 @@ class CartService
             throw CartException::subscriptionQuantityExceeded();
         }
 
-        if ($product->track_inventory && $product->stock_quantity !== null && $product->stock_quantity < $quantity) {
-            throw CartException::insufficientStock($product->stock_quantity);
-        }
+        return DB::transaction(function () use ($item, $product, $quantity): CartItem {
+            if ($product->track_inventory) {
+                $locked = Product::where('id', $product->id)->lockForUpdate()->first();
+                if ($locked->stock_quantity !== null && $locked->stock_quantity < $quantity) {
+                    throw CartException::insufficientStock($locked->stock_quantity);
+                }
+            }
 
-        $item->update(['quantity' => $quantity]);
+            $item->update(['quantity' => $quantity]);
 
-        $this->syncCartCount($item->cart);
+            $this->syncCartCount($item->cart);
 
-        return $item->fresh();
+            return $item->fresh();
+        });
     }
 
     public function remove(CartItem $item): void
