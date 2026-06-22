@@ -76,7 +76,9 @@ export default function AdminSupportShow({ conversation }: Props) {
         const channel = window.Echo.private(`conversation.${conversation.id}`);
 
         channel.listen('NewSupportMessage', (msg: SupportMessage) => {
-            setMessages((prev) => [...prev, msg]);
+            // StrictMode mounts effects twice, which can register two listeners on the same channel.
+            // Guard by ID so a message broadcast once can't appear twice.
+            setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
         });
 
         channel.listenForWhisper('typing', ({ name }: { name: string }) => {
