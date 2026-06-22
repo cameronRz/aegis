@@ -58,12 +58,12 @@ class ProductController extends Controller
             ? $request->file('image')->store('products', 'public')
             : null;
 
-        Product::create([
+        $product = Product::create([
             ...$request->safe()->except('image'),
             'image' => $imagePath,
         ]);
 
-        return redirect()->route('admin.products');
+        return redirect()->route('admin.products.show', $product);
     }
 
     public function show(Product $product): Response
