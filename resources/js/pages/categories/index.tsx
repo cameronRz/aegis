@@ -35,6 +35,7 @@ type TableProps = {
     onDelete: (category: Category) => void;
 };
 
+// Extracted so TanStack Table v8 remounts cleanly via key change (React 19 prop-update incompatibility).
 function CategoriesTable({ categories, canEdit, canDelete, onDelete }: TableProps) {
     const columns = useMemo(
         () => [

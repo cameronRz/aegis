@@ -36,11 +36,13 @@ function formatDeletedAt(dateString: string): string {
 
 const columnHelper = createColumnHelper<Product>();
 
-export default function ProductsTrash({ products, filters }: Props) {
-    const [search, setSearch] = useDebouncedSearch(filters.search, productsTrashRoute.url());
-    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-    const [deleting, setDeleting] = useState(false);
+type TableProps = {
+    products: PaginatedData<Product>;
+    onDelete: (product: Product) => void;
+};
 
+// Extracted so TanStack Table v8 remounts cleanly via key change (React 19 prop-update incompatibility).
+function ProductsTrashTable({ products, onDelete }: TableProps) {
     const columns = useMemo(
         () => [
             columnHelper.accessor('name', { header: 'Name' }),
@@ -81,7 +83,7 @@ export default function ProductsTrash({ products, filters }: Props) {
                             size="sm"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setProductToDelete(row.original);
+                                onDelete(row.original);
                             }}
                         >
                             Delete
@@ -90,7 +92,7 @@ export default function ProductsTrash({ products, filters }: Props) {
                 ),
             }),
         ],
-        [],
+        [onDelete],
     );
 
     // eslint-disable-next-line react-hooks/incompatible-library
@@ -99,6 +101,25 @@ export default function ProductsTrash({ products, filters }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+
+    return (
+        <>
+            <DataTable table={table} emptyMessage="No deleted products." />
+            <DataTablePagination paginatedData={products} />
+        </>
+    );
+}
+
+export default function ProductsTrash({ products, filters }: Props) {
+    const [search, setSearch] = useDebouncedSearch(filters.search, productsTrashRoute.url());
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    /**
+     * TanStack Table v8 doesn't re-render when `data` changes via React 19 prop updates.
+     * Changing the key forces ProductsTrashTable to remount with the new data.
+     */
+    const tableKey = products.data.map((p) => `${p.id}:${p.updated_at}`).join(',');
 
     function handleForceDelete() {
         if (!productToDelete) return;
@@ -127,9 +148,11 @@ export default function ProductsTrash({ products, filters }: Props) {
                     />
                 </div>
 
-                <DataTable table={table} emptyMessage="No deleted products." />
-
-                <DataTablePagination paginatedData={products} />
+                <ProductsTrashTable
+                    key={tableKey}
+                    products={products}
+                    onDelete={setProductToDelete}
+                />
             </div>
 
             <ConfirmDialog
