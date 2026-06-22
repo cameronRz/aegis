@@ -130,3 +130,13 @@ it('syncs cart count to session after mutation', function () {
 
     expect(session('cart_count'))->toBe(1);
 });
+
+it('syncs cart count as total quantity not distinct product count', function () {
+    $productA = Product::factory()->create();
+    $productB = Product::factory()->create();
+
+    $this->service->add($this->cart, $productA, 3);
+    $this->service->add($this->cart, $productB, 2);
+
+    expect(session('cart_count'))->toBe(5);
+});

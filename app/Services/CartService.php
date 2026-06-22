@@ -45,7 +45,7 @@ class CartService
 
             if ($existingItem) {
                 $existingItem->update(['quantity' => $newQuantity]);
-                $this->syncCartCount($cart);
+                DB::afterCommit(fn () => $this->syncCartCount($cart));
 
                 return $existingItem->fresh();
             }
@@ -55,7 +55,7 @@ class CartService
                 'quantity' => $quantity,
             ]);
 
-            $this->syncCartCount($cart);
+            DB::afterCommit(fn () => $this->syncCartCount($cart));
 
             return $item;
         });
@@ -73,7 +73,9 @@ class CartService
             throw CartException::subscriptionQuantityExceeded();
         }
 
-        return DB::transaction(function () use ($item, $product, $quantity): CartItem {
+        $cart = $item->cart;
+
+        return DB::transaction(function () use ($item, $product, $quantity, $cart): CartItem {
             if ($product->track_inventory) {
                 $locked = Product::where('id', $product->id)->lockForUpdate()->first();
                 if ($locked->stock_quantity !== null && $locked->stock_quantity < $quantity) {
@@ -83,7 +85,7 @@ class CartService
 
             $item->update(['quantity' => $quantity]);
 
-            $this->syncCartCount($item->cart);
+            DB::afterCommit(fn () => $this->syncCartCount($cart));
 
             return $item->fresh();
         });
@@ -123,6 +125,6 @@ class CartService
 
     private function syncCartCount(Cart $cart): void
     {
-        session(['cart_count' => $cart->items()->count()]);
+        session(['cart_count' => $cart->items()->sum('quantity')]);
     }
 }
