@@ -28,15 +28,14 @@ const columnHelper = createColumnHelper<Category>();
 
 type PageProps = { auth: Auth };
 
-export default function CategoriesIndex({ categories, filters }: Props) {
-    const { auth } = usePage<PageProps>().props;
-    const [search, setSearch] = useDebouncedSearch(filters.search, adminCategoriesRoute.url());
-    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-    const [deleting, setDeleting] = useState(false);
+type TableProps = {
+    categories: PaginatedData<Category>;
+    canEdit: boolean;
+    canDelete: boolean;
+    onDelete: (category: Category) => void;
+};
 
-    const canEdit = auth.can.edit_category;
-    const canDelete = auth.can.delete_category;
-
+function CategoriesTable({ categories, canEdit, canDelete, onDelete }: TableProps) {
     const columns = useMemo(
         () => [
             columnHelper.accessor('name', { header: 'Name' }),
@@ -72,7 +71,7 @@ export default function CategoriesIndex({ categories, filters }: Props) {
                                           size="sm"
                                           onClick={(e) => {
                                               e.stopPropagation();
-                                              setCategoryToDelete(row.original);
+                                              onDelete(row.original);
                                           }}
                                       >
                                           Delete
@@ -84,7 +83,7 @@ export default function CategoriesIndex({ categories, filters }: Props) {
                   ]
                 : []),
         ],
-        [canEdit, canDelete],
+        [canEdit, canDelete, onDelete],
     );
 
     // eslint-disable-next-line react-hooks/incompatible-library
@@ -93,6 +92,29 @@ export default function CategoriesIndex({ categories, filters }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+
+    return (
+        <>
+            <DataTable table={table} emptyMessage="No categories found." />
+            <DataTablePagination paginatedData={categories} />
+        </>
+    );
+}
+
+export default function CategoriesIndex({ categories, filters }: Props) {
+    const { auth } = usePage<PageProps>().props;
+    const [search, setSearch] = useDebouncedSearch(filters.search, adminCategoriesRoute.url());
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const canEdit = auth.can.edit_category;
+    const canDelete = auth.can.delete_category;
+
+    /**
+     * TanStack Table v8 doesn't re-render when `data` changes via React 19 prop updates.
+     * Changing the key forces CategoriesTable to remount with the new data.
+     */
+    const tableKey = categories.data.map((c) => `${c.id}:${c.updated_at}`).join(',');
 
     function handleDelete() {
         if (!categoryToDelete) return;
@@ -126,9 +148,13 @@ export default function CategoriesIndex({ categories, filters }: Props) {
                     )}
                 </div>
 
-                <DataTable table={table} emptyMessage="No categories found." />
-
-                <DataTablePagination paginatedData={categories} />
+                <CategoriesTable
+                    key={tableKey}
+                    categories={categories}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onDelete={setCategoryToDelete}
+                />
             </div>
 
             <ConfirmDialog
