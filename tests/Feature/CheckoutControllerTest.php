@@ -195,6 +195,26 @@ it('renders the success page for the order owner', function () {
         ->assertInertia(fn ($page) => $page->component('checkout/success'));
 });
 
+it('resets cart_count to zero in session on success page', function () {
+    $product = Product::factory()->create();
+    $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+    $cart->items()->create(['product_id' => $product->id, 'quantity' => 3]);
+    session(['cart_count' => 3]);
+
+    Order::factory()->create([
+        'user_id' => $this->user->id,
+        'stripe_checkout_session_id' => 'cs_test123',
+        'status' => OrderStatus::Paid,
+    ]);
+
+    // Simulate webhook having already cleared the cart
+    $cart->items()->delete();
+
+    actingAs($this->user)
+        ->get(route('checkout.success', ['session_id' => 'cs_test123']))
+        ->assertSessionHas('cart_count', 0);
+});
+
 it('returns 403 if success page accessed by wrong user', function () {
     $other = User::factory()->create();
     Order::factory()->create([

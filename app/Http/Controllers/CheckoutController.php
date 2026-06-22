@@ -168,6 +168,11 @@ class CheckoutController extends Controller
 
         $this->authorize('view', $order);
 
+        // The webhook clears the cart but runs in a separate HTTP context, so its
+        // session write doesn't reach the user's session. Re-sync here from the DB.
+        $cart = $this->cartService->getOrCreate($request->user());
+        session(['cart_count' => $cart->items()->sum('quantity')]);
+
         return Inertia::render('checkout/success', [
             'order' => $order,
         ]);
