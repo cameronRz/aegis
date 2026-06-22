@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
@@ -128,5 +130,25 @@ it('passes filters back to the page', function () {
         ->assertInertia(fn ($page) => $page
             ->where('filters.search', 'widget')
             ->where('filters.category', 'tools')
+        );
+});
+
+it('passes an empty cartItems map when nothing is in the cart', function () {
+    Product::factory()->create();
+
+    actingAs($this->user)
+        ->get(route('shop'))
+        ->assertInertia(fn ($page) => $page->where('cartItems', []));
+});
+
+it('passes cartItems map with productId keys for products in the cart', function () {
+    $product = Product::factory()->create();
+    $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+    $item = CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $product->id]);
+
+    actingAs($this->user)
+        ->get(route('shop'))
+        ->assertInertia(fn ($page) => $page
+            ->where("cartItems.{$product->id}", $item->id)
         );
 });

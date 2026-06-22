@@ -1,7 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { store as addToCart } from '@/actions/App/Http/Controllers/CartController';
+import { destroy as removeFromCart, store as addToCart } from '@/actions/App/Http/Controllers/CartController';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { ProductTypeBadge } from '@/components/product-type-badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ type Props = {
     products: PaginatedData<Product>;
     categories: ShopCategory[];
     filters: { search?: string; category?: string };
+    cartItems: Record<number, number>;
 };
 
 function formatProductPrice(product: Product): string {
@@ -38,7 +39,7 @@ function formatProductPrice(product: Product): string {
     return price;
 }
 
-export default function ShopIndex({ products, categories, filters }: Props) {
+export default function ShopIndex({ products, categories, filters, cartItems }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
 
     /**
@@ -129,23 +130,40 @@ export default function ShopIndex({ products, categories, filters }: Props) {
                                         <p className="mt-auto pt-2 font-semibold">
                                             {formatProductPrice(product)}
                                         </p>
-                                        <Button
-                                            size="sm"
-                                            className="w-full"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                router.post(
-                                                    addToCart.url(),
-                                                    { product_id: product.id },
-                                                    {
+                                        {cartItems[product.id] == null ? (
+                                            <Button
+                                                size="sm"
+                                                className="w-full"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.post(
+                                                        addToCart.url(),
+                                                        { product_id: product.id },
+                                                        {
+                                                            preserveScroll: true,
+                                                            onSuccess: () => toast('Added to cart'),
+                                                        },
+                                                    );
+                                                }}
+                                            >
+                                                Add to Cart
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="destructive"
+                                                className="w-full"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.delete(removeFromCart(cartItems[product.id]).url, {
                                                         preserveScroll: true,
-                                                        onSuccess: () => toast('Added to cart'),
-                                                    },
-                                                );
-                                            }}
-                                        >
-                                            Add to Cart
-                                        </Button>
+                                                        onSuccess: () => toast('Removed from cart'),
+                                                    });
+                                                }}
+                                            >
+                                                Remove from Cart
+                                            </Button>
+                                        )}
                                     </CardContent>
                                 </Card>
                             );
