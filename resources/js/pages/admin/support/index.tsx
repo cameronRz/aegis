@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useMemo } from 'react';
+import { ClientDate } from '@/components/client-date';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +43,7 @@ const columns = [
         header: 'Last Message',
         cell: ({ getValue }) => {
             const val = getValue();
-            return val ? new Date(val).toLocaleString() : '—';
+            return val ? <ClientDate iso={val} options={{ dateStyle: 'short', timeStyle: 'short' }} /> : '—';
         },
     }),
     columnHelper.accessor('unread_count', {

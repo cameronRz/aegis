@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Check, Send } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { ClientDate } from '@/components/client-date';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,10 +22,6 @@ type Props = {
 };
 
 function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: boolean }) {
-    const time = new Date(message.created_at).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 
     return (
         <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
@@ -46,8 +43,7 @@ function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: b
                         isMine ? 'justify-end' : 'justify-start',
                     )}
                 >
-                    {/* Server (UTC) and browser (local TZ) format this differently — mismatch is intentional */}
-                    <span suppressHydrationWarning>{time}</span>
+                    <ClientDate iso={message.created_at} options={{ hour: '2-digit', minute: '2-digit' }} />
                     {isMine && message.read_at && <Check className="h-3 w-3" />}
                 </div>
             </div>
