@@ -6,6 +6,7 @@ use App\Enum\ConversationStatus;
 use App\Events\ConversationClosed;
 use App\Http\Controllers\Controller;
 use App\Models\SupportConversation;
+use App\Models\SupportMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,8 +14,12 @@ use Inertia\Response;
 
 class SupportConversationController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        SupportMessage::whereNull('read_at')
+            ->where('sender_id', '!=', $request->user()->id)
+            ->update(['read_at' => now()]);
+
         $conversations = SupportConversation::with('client:id,first_name,last_name')
             ->withCount(['messages as unread_count' => function ($query) {
                 $query->whereNull('read_at');

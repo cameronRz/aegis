@@ -374,3 +374,111 @@ test('support message endpoint is rate limited to 60 requests per minute', funct
 
     expect($route->middleware())->toContain('throttle:60,1');
 });
+
+// ── Real-time badge + broadcast channel tests ─────────────────────────────────
+
+test('admin visiting support queue marks all unread client messages as read', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->client->id,
+        'content' => 'Help!',
+        'read_at' => null,
+    ]);
+
+    actingAs($this->admin)
+        ->get(route('admin.support.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 0));
+
+    expect(SupportMessage::whereNull('read_at')->count())->toBe(0);
+});
+
+test('unread badge shows new messages that arrive after queue visit', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    // Visit queue first (marks existing messages as read)
+    actingAs($this->admin)->get(route('admin.support.index'))->assertOk();
+
+    // New message arrives after the queue visit
+    SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->client->id,
+        'content' => 'New message!',
+        'read_at' => null,
+    ]);
+
+    // Badge now reflects the new unread message
+    actingAs($this->admin)
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 1));
+});
+
+test('clicking a conversation clears its contribution to the badge', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->client->id,
+        'content' => 'New message!',
+        'read_at' => null,
+    ]);
+
+    // Navigate to show: marks the message as read → badge goes to 0
+    actingAs($this->admin)
+        ->get(route('admin.support.show', $conversation))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 0));
+});
+
+test('NewSupportMessage broadcasts on conversation and admin user channels when client sends', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    $message = SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->client->id,
+        'content' => 'Hello!',
+    ]);
+
+    $message->load('conversation');
+    $event = new NewSupportMessage($message);
+    $channelNames = collect($event->broadcastOn())->map(fn ($ch) => $ch->name)->all();
+
+    expect($channelNames)->toContain("private-conversation.{$conversation->id}");
+    expect($channelNames)->toContain("private-App.Models.User.{$this->admin->id}");
+    expect($channelNames)->toContain("private-App.Models.User.{$this->agent->id}");
+});
+
+test('NewSupportMessage broadcasts on conversation and client user channel when agent sends', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    $message = SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->agent->id,
+        'content' => 'How can I help?',
+    ]);
+
+    $message->load('conversation');
+    $event = new NewSupportMessage($message);
+    $channelNames = collect($event->broadcastOn())->map(fn ($ch) => $ch->name)->all();
+
+    expect($channelNames)->toContain("private-conversation.{$conversation->id}");
+    expect($channelNames)->toContain("private-App.Models.User.{$this->client->id}");
+    expect($channelNames)->not->toContain("private-App.Models.User.{$this->agent->id}");
+});
