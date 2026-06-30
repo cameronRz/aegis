@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 use OpenAI;
 use OpenAI\Contracts\ClientContract;
 use Stripe\StripeClient;
@@ -46,6 +48,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response) {
+            if (in_array($response->statusCode(), [403, 404, 500, 503])) {
+                return $response->render('error', [
+                    'status' => $response->statusCode(),
+                ])->withSharedData();
+            }
+        });
 
         Product::observe(ProductObserver::class);
         Document::observe(DocumentObserver::class);
