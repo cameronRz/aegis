@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { ChevronRight, Loader2, Send } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -37,13 +38,28 @@ function MessageBubble({ message, sources, isStreaming }: BubbleProps) {
             <div className="max-w-[80%] space-y-1.5">
                 <div
                     className={cn(
-                        'rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+                        'rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
                         isUser
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-primary text-primary-foreground whitespace-pre-wrap'
                             : 'bg-muted',
                     )}
                 >
-                    {message.content}
+                    {isUser ? (
+                        message.content
+                    ) : (
+                        <ReactMarkdown
+                            components={{
+                                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                ul: ({ children }) => <ul className="mb-2 list-disc pl-4 last:mb-0">{children}</ul>,
+                                ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 last:mb-0">{children}</ol>,
+                                li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                                em: ({ children }) => <em className="italic">{children}</em>,
+                            }}
+                        >
+                            {message.content}
+                        </ReactMarkdown>
+                    )}
                     {isStreaming && (
                         <span className="ml-0.5 inline-block h-[1em] w-0.5 translate-y-[1px] animate-pulse bg-current" />
                     )}
