@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enum\ConversationStatus;
+use App\Events\ConversationClosed;
 use App\Http\Controllers\Controller;
 use App\Models\SupportConversation;
 use Illuminate\Http\RedirectResponse;
@@ -47,6 +48,8 @@ class SupportConversationController extends Controller
     public function close(SupportConversation $conversation): RedirectResponse
     {
         $conversation->update(['status' => ConversationStatus::Closed]);
+
+        broadcast(new ConversationClosed($conversation));
 
         return redirect()->back();
     }

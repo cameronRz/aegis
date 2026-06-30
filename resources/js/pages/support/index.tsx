@@ -16,7 +16,6 @@ type Props = {
 };
 
 function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: boolean }) {
-
     return (
         <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
             <div className="max-w-[75%] space-y-1">
@@ -45,9 +44,10 @@ function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: b
     );
 }
 
-export default function SupportIndex({ conversation }: Props) {
+function ConversationView({ conversation }: { conversation: SupportConversation }) {
     const { auth } = usePage<{ auth: Auth }>().props;
-    const [messages, setMessages] = useState<SupportMessage[]>(conversation?.messages ?? []);
+    const [messages, setMessages] = useState<SupportMessage[]>(conversation.messages ?? []);
+    const [closedByBroadcast, setClosedByBroadcast] = useState(false);
     const [content, setContent] = useState('');
     const [sending, setSending] = useState(false);
     const [typingName, setTypingName] = useState<string | null>(null);
@@ -55,14 +55,15 @@ export default function SupportIndex({ conversation }: Props) {
     const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const whisperTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const isClosed = conversation.status === 'closed' || closedByBroadcast;
+
     useEffect(() => {
         const el = scrollRef.current;
+
         if (el) el.scrollTop = el.scrollHeight;
     }, [messages.length]);
 
     useEffect(() => {
-        if (!conversation) return;
-
         const channel = window.Echo.private(`conversation.${conversation.id}`);
 
         channel.listen('NewSupportMessage', (msg: SupportMessage) => {
@@ -70,6 +71,8 @@ export default function SupportIndex({ conversation }: Props) {
             // Guard by ID so a message broadcast once can't appear twice.
             setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
         });
+
+        channel.listen('ConversationClosed', () => setClosedByBroadcast(true));
 
         channel.listenForWhisper('typing', ({ name }: { name: string }) => {
             setTypingName(name);
@@ -80,10 +83,9 @@ export default function SupportIndex({ conversation }: Props) {
         return () => {
             window.Echo.leave(`conversation.${conversation.id}`);
         };
-    }, [conversation?.id]);
+    }, [conversation.id]);
 
     function sendWhisper() {
-        if (!conversation) return;
         if (whisperTimerRef.current) clearTimeout(whisperTimerRef.current);
         whisperTimerRef.current = setTimeout(() => {
             window.Echo.private(`conversation.${conversation.id}`).whisper('typing', {
@@ -94,7 +96,7 @@ export default function SupportIndex({ conversation }: Props) {
 
     function submit() {
         const trimmed = content.trim();
-        if (!trimmed || !conversation || sending) return;
+        if (!trimmed || sending) return;
 
         const optimistic: SupportMessage = {
             id: -Date.now(),
@@ -136,8 +138,64 @@ export default function SupportIndex({ conversation }: Props) {
         sendWhisper();
     }
 
-    const isClosed = conversation?.status === 'closed';
+    return (
+        <div className="mx-auto flex h-[calc(100svh-4rem)] w-full max-w-3xl flex-col overflow-hidden">
+            {isClosed && (
+                <div className="bg-muted/50 shrink-0 border-b px-4 py-2 text-center text-sm text-muted-foreground">
+                    This conversation has been closed.{' '}
+                    <button
+                        onClick={() => router.post(storeConversation.url())}
+                        className="text-foreground underline underline-offset-2 hover:no-underline"
+                    >
+                        Start a new conversation
+                    </button>
+                </div>
+            )}
 
+            <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                {messages.length === 0 && (
+                    <div className="text-muted-foreground mt-12 text-center text-sm">
+                        No messages yet. Send one below to get started.
+                    </div>
+                )}
+                {messages.map((msg) => (
+                    <MessageBubble key={msg.id} message={msg} isMine={msg.sender_id === auth.user.id} />
+                ))}
+            </div>
+
+            {!isClosed && (
+                <div className="shrink-0 border-t px-4 py-3">
+                    {typingName && (
+                        <p className="text-muted-foreground mb-1.5 text-xs">{typingName} is typing…</p>
+                    )}
+                    <div className="flex gap-2">
+                        <Textarea
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Type a message…"
+                            className="max-h-32 resize-none"
+                            disabled={sending}
+                        />
+                        <Button
+                            onClick={submit}
+                            disabled={!content.trim() || sending}
+                            size="icon"
+                            className="shrink-0 self-end"
+                        >
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-xs">
+                        Enter to send · Shift+Enter for a new line
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default function SupportIndex({ conversation }: Props) {
     return (
         <>
             <Head title="Support" />
@@ -159,62 +217,7 @@ export default function SupportIndex({ conversation }: Props) {
                     </Button>
                 </div>
             ) : (
-                <div className="mx-auto flex h-[calc(100svh-4rem)] w-full max-w-3xl flex-col overflow-hidden">
-                    {isClosed && (
-                        <div className="bg-muted/50 shrink-0 border-b px-4 py-2 text-center text-sm text-muted-foreground">
-                            This conversation has been closed.
-                        </div>
-                    )}
-
-                    <div
-                        ref={scrollRef}
-                        className="flex-1 space-y-4 overflow-y-auto px-4 py-4"
-                    >
-                        {messages.length === 0 && (
-                            <div className="text-muted-foreground mt-12 text-center text-sm">
-                                No messages yet. Send one below to get started.
-                            </div>
-                        )}
-                        {messages.map((msg) => (
-                            <MessageBubble
-                                key={msg.id}
-                                message={msg}
-                                isMine={msg.sender_id === auth.user.id}
-                            />
-                        ))}
-                    </div>
-
-                    {!isClosed && (
-                        <div className="shrink-0 border-t px-4 py-3">
-                            {typingName && (
-                                <p className="text-muted-foreground mb-1.5 text-xs">
-                                    {typingName} is typing…
-                                </p>
-                            )}
-                            <div className="flex gap-2">
-                                <Textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="Type a message…"
-                                    className="max-h-32 resize-none"
-                                    disabled={sending}
-                                />
-                                <Button
-                                    onClick={submit}
-                                    disabled={!content.trim() || sending}
-                                    size="icon"
-                                    className="shrink-0 self-end"
-                                >
-                                    <Send className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            <p className="text-muted-foreground mt-1.5 text-xs">
-                                Enter to send · Shift+Enter for a new line
-                            </p>
-                        </div>
-                    )}
-                </div>
+                <ConversationView key={conversation.id} conversation={conversation} />
             )}
         </>
     );
