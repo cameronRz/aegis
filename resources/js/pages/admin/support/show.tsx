@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { index as adminSupportIndex, show as showAdminConversation, close as closeConversation } from '@/routes/admin/support';
+import { index as adminSupportIndex, close as closeConversation } from '@/routes/admin/support';
 import { store as storeMessage } from '@/routes/support/messages';
 import type { Auth, SupportConversation, SupportMessage, User } from '@/types';
 
@@ -65,6 +65,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     useEffect(() => {
         const el = scrollRef.current;
+
         if (el) el.scrollTop = el.scrollHeight;
     }, [messages.length]);
 
@@ -79,7 +80,9 @@ export default function AdminSupportShow({ conversation }: Props) {
 
         channel.listenForWhisper('typing', ({ name }: { name: string }) => {
             setTypingName(name);
+
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+
             typingTimerRef.current = setTimeout(() => setTypingName(null), 3000);
         });
 
@@ -90,6 +93,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     function sendWhisper() {
         if (whisperTimerRef.current) clearTimeout(whisperTimerRef.current);
+
         whisperTimerRef.current = setTimeout(() => {
             window.Echo.private(`conversation.${conversation.id}`).whisper('typing', {
                 name: auth.user.full_name,
@@ -136,8 +140,10 @@ export default function AdminSupportShow({ conversation }: Props) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             submit();
+
             return;
         }
+
         sendWhisper();
     }
 
