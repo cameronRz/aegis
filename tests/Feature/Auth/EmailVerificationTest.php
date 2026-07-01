@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
+    $this->withoutVite();
     $this->skipUnlessFortifyHas(Features::emailVerification());
 });
 
