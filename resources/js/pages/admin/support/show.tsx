@@ -103,6 +103,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     function submit() {
         const trimmed = content.trim();
+
         if (!trimmed || sending) return;
 
         const optimistic: SupportMessage = {

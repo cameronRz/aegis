@@ -13,6 +13,7 @@ export function ClientDate({ iso, options }: Props) {
     const [formatted, setFormatted] = useState('');
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormatted(new Intl.DateTimeFormat(undefined, options).format(new Date(iso)));
     }, [iso, options]);
 

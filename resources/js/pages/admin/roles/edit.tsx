@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import type { RoleFormData } from './role-form-fields';
+import { RoleFormFields } from './role-form-fields';
 import { update as updateRole } from '@/actions/App/Http/Controllers/RoleController';
 import { Button } from '@/components/ui/button';
 import { roles as rolesRoute } from '@/routes/admin';
 import type { Permission, Role } from '@/types';
-import type { RoleFormData } from './role-form-fields';
-import { RoleFormFields } from './role-form-fields';
 
 type Props = {
     role: Role & { permissions: Permission[] };

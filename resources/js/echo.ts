@@ -20,6 +20,7 @@ if (typeof window !== 'undefined') {
     // toOthers() on the server has no socket to exclude and broadcasts back to the sender.
     router.on('before', (event) => {
         const socketId = window.Echo?.socketId();
+
         if (socketId) {
             event.detail.visit.headers['X-Socket-ID'] = socketId;
         }

@@ -1,8 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { ChevronRight, Loader2, Send } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';

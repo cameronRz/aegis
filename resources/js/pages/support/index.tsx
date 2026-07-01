@@ -76,7 +76,9 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
 
         channel.listenForWhisper('typing', ({ name }: { name: string }) => {
             setTypingName(name);
+
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+
             typingTimerRef.current = setTimeout(() => setTypingName(null), 3000);
         });
 
@@ -87,6 +89,7 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
 
     function sendWhisper() {
         if (whisperTimerRef.current) clearTimeout(whisperTimerRef.current);
+
         whisperTimerRef.current = setTimeout(() => {
             window.Echo.private(`conversation.${conversation.id}`).whisper('typing', {
                 name: auth.user.full_name,
@@ -96,6 +99,7 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
 
     function submit() {
         const trimmed = content.trim();
+
         if (!trimmed || sending) return;
 
         const optimistic: SupportMessage = {
@@ -133,8 +137,10 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             submit();
+
             return;
         }
+
         sendWhisper();
     }
 

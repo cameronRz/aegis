@@ -21,6 +21,7 @@ const columns = [
         header: 'Client',
         cell: ({ getValue }) => {
             const client = getValue();
+
             return client ? (
                 <span className="font-medium">{client.full_name}</span>
             ) : (
@@ -32,6 +33,7 @@ const columns = [
         header: 'Status',
         cell: ({ getValue }) => {
             const status = getValue();
+
             return (
                 <Badge variant={status === 'open' ? 'default' : 'outline'}>
                     {status === 'open' ? 'Open' : 'Closed'}
@@ -43,6 +45,7 @@ const columns = [
         header: 'Last Message',
         cell: ({ getValue }) => {
             const val = getValue();
+
             return val ? <ClientDate iso={val} options={{ dateStyle: 'short', timeStyle: 'short' }} /> : '—';
         },
     }),
@@ -50,6 +53,7 @@ const columns = [
         header: 'Unread',
         cell: ({ getValue }) => {
             const count = getValue();
+
             return count > 0 ? (
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium text-primary-foreground tabular-nums">
                     {count}

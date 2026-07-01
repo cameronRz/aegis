@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import { UserFormFields } from './user-form-fields';
+import type { UserFormData } from './user-form-fields';
 import { store as storeUser } from '@/actions/App/Http/Controllers/UserController';
 import { Button } from '@/components/ui/button';
 import { users as adminUsersRoute } from '@/routes/admin';
 import type { Role, Tier } from '@/types';
-import { UserFormFields } from './user-form-fields';
-import type { UserFormData } from './user-form-fields';
 
 type Props = {
     availableTiers: Tier[];

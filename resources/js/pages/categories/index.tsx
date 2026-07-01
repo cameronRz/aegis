@@ -160,7 +160,9 @@ export default function CategoriesIndex({ categories, filters }: Props) {
 
             <ConfirmDialog
                 open={categoryToDelete !== null}
-                onOpenChange={(open) => { if (!open) setCategoryToDelete(null); }}
+                onOpenChange={(open) => {
+ if (!open) setCategoryToDelete(null); 
+}}
                 title="Delete Category"
                 description={
                     <>

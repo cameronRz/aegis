@@ -157,7 +157,9 @@ export default function ProductsTrash({ products, filters }: Props) {
 
             <ConfirmDialog
                 open={productToDelete !== null}
-                onOpenChange={(open) => { if (!open) setProductToDelete(null); }}
+                onOpenChange={(open) => {
+ if (!open) setProductToDelete(null); 
+}}
                 title="Permanently Delete Product"
                 alertTitle="This cannot be undone."
                 description={

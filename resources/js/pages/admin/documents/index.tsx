@@ -58,6 +58,7 @@ function DocumentsTable({ documents, onDelete }: TableProps) {
                 header: 'Status',
                 cell: ({ row }) => {
                     const config = statusConfig[row.original.status];
+
                     return (
                         <Badge variant={config.variant} className="gap-1.5">
                             {config.spinning && (
@@ -146,6 +147,7 @@ export default function DocumentsIndex({ documents }: Props) {
 
     function handleDelete() {
         if (!documentToDelete) return;
+
         setDeleting(true);
         router.delete(destroyDocument(documentToDelete).url, {
             onFinish: () => {
