@@ -20,6 +20,9 @@ class CartService
         return $cart;
     }
 
+    /**
+     * @throws \Throwable
+     */
     public function add(Cart $cart, Product $product, int $quantity = 1): CartItem
     {
         if ($product->trashed() || ! $product->is_active) {
@@ -61,6 +64,9 @@ class CartService
         });
     }
 
+    /**
+     * @throws \Throwable
+     */
     public function updateQuantity(CartItem $item, int $quantity): CartItem
     {
         $product = $item->product;

@@ -22,7 +22,6 @@ type Props = {
 };
 
 function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: boolean }) {
-
     return (
         <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
             <div className="max-w-[75%] space-y-1">

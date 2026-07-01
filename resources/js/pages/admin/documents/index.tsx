@@ -5,7 +5,7 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { Loader2 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table';
@@ -134,7 +134,7 @@ export default function DocumentsIndex({ documents }: Props) {
 
     const tableKey = documents.data.map((d) => `${d.id}:${d.status}`).join(',');
 
-    function handleUpload(e: FormEvent<HTMLFormElement>) {
+    function handleUpload(e: SubmitEvent<HTMLFormElement>) {
         e.preventDefault();
         post(storeDocument.url(), {
             forceFormData: true,

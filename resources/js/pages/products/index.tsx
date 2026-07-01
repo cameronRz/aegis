@@ -166,8 +166,8 @@ export default function ProductsIndex({ products, filters }: Props) {
             <ConfirmDialog
                 open={productToDelete !== null}
                 onOpenChange={(open) => {
- if (!open) setProductToDelete(null); 
-}}
+                    if (!open) setProductToDelete(null);
+                }}
                 title="Delete Product"
                 description={
                     <>

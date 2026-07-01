@@ -187,6 +187,9 @@ class WebhookController extends Controller
         ]);
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function handleInvoicePaymentSucceeded(Invoice $invoice): void
     {
         if (! $invoice->subscription) {
@@ -221,6 +224,9 @@ class WebhookController extends Controller
         $subscription?->update(['status' => SubscriptionStatus::PastDue->value]);
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function handleSubscriptionUpdated(StripeSubscription $stripeSub): void
     {
         DB::transaction(function () use ($stripeSub): void {
@@ -240,6 +246,9 @@ class WebhookController extends Controller
         });
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function handleSubscriptionDeleted(StripeSubscription $stripeSub): void
     {
         DB::transaction(function () use ($stripeSub): void {
@@ -258,6 +267,9 @@ class WebhookController extends Controller
         });
     }
 
+    /**
+     * @throws \Throwable
+     */
     private function handleChargeRefunded(object $charge): void
     {
         if (! $charge->payment_intent) {
