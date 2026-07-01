@@ -28,6 +28,7 @@ function getGroupLabel(name: string): string {
         product: 'Products', products: 'Products',
         ai_assistant: 'AI Assistant', support: 'Support'
     };
+
     return labels[noun] ?? noun.replace(/_/g, ' ');
 }
 
@@ -38,10 +39,12 @@ function toggleId(ids: number[], id: number): number[] {
 export function RoleFormFields({ data, setData, errors, allPermissions }: Props) {
     const grouped = useMemo(() => {
         const groups: Record<string, Permission[]> = {};
+
         for (const p of allPermissions) {
             const label = getGroupLabel(p.name);
             (groups[label] ??= []).push(p);
         }
+
         return groups;
     }, [allPermissions]);
 

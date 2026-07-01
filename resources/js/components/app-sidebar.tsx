@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Bot, ClipboardList, FileText, FolderGit2, HeadphonesIcon, LayoutGrid, Package, Receipt, RefreshCcw, Settings2, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
+import { Bot, ClipboardList, FileText, HeadphonesIcon, LayoutGrid, Package, Receipt, RefreshCcw, Settings2, ShieldCheck, ShoppingBag, ShoppingCart, Tag, UserPlus, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';

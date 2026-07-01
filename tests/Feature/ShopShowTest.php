@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\StripeService;
@@ -79,4 +81,22 @@ it('loads the product category', function () {
     actingAs($this->user)
         ->get(route('shop.show', $product))
         ->assertInertia(fn ($page) => $page->has('product.category'));
+});
+
+it('passes null cartItemId when product is not in the cart', function () {
+    $product = Product::factory()->create();
+
+    actingAs($this->user)
+        ->get(route('shop.show', $product))
+        ->assertInertia(fn ($page) => $page->where('cartItemId', null));
+});
+
+it('passes the cartItemId when product is already in the cart', function () {
+    $product = Product::factory()->create();
+    $cart = Cart::factory()->create(['user_id' => $this->user->id]);
+    $item = CartItem::factory()->create(['cart_id' => $cart->id, 'product_id' => $product->id]);
+
+    actingAs($this->user)
+        ->get(route('shop.show', $product))
+        ->assertInertia(fn ($page) => $page->where('cartItemId', $item->id));
 });

@@ -99,6 +99,7 @@ export default function RolesIndex({ roles }: Props) {
                 if (!(page.props as { errors?: PageErrors }).errors?.delete) {
                     setRoleToDelete(null);
                 }
+
                 setDeleting(false);
             },
             onError: () => setDeleting(false),

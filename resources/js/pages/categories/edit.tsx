@@ -1,12 +1,12 @@
 import { Head, useForm } from '@inertiajs/react';
+import { CategoryFormFields } from './category-form-fields';
+import type { CategoryFormData, ParentCategory } from './category-form-fields';
 import { update as updateCategory } from '@/actions/App/Http/Controllers/CategoryController';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { categories as adminCategoriesRoute } from '@/routes/admin';
 import type { Category } from '@/types';
 
-import { CategoryFormFields } from './category-form-fields';
-import type { CategoryFormData, ParentCategory } from './category-form-fields';
 
 type Props = {
     category: Category;

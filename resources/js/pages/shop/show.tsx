@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { toast } from 'sonner';
-import { store as addToCart } from '@/actions/App/Http/Controllers/CartController';
+import { destroy as removeFromCart, store as addToCart } from '@/actions/App/Http/Controllers/CartController';
 import { ProductTypeBadge } from '@/components/product-type-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import type { BillingInterval, Product } from '@/types';
 type Props = {
     product: Product;
     imageUrl: string | null;
+    cartItemId: number | null;
 };
 
 function formatProductPrice(product: Product): string {
@@ -30,7 +31,7 @@ function stockLabel(product: Product): string | null {
     return product.stock_quantity && product.stock_quantity > 0 ? 'In stock' : 'Out of stock';
 }
 
-export default function ShopShow({ product, imageUrl }: Props) {
+export default function ShopShow({ product, imageUrl, cartItemId }: Props) {
     const isSubscription = product.type === 'subscription';
     const isPhysical = product.type === 'physical';
     const stock = stockLabel(product);
@@ -68,21 +69,36 @@ export default function ShopShow({ product, imageUrl }: Props) {
                             </Badge>
                         )}
 
-                        <Button
-                            className="w-full sm:w-auto"
-                            onClick={() =>
-                                router.post(
-                                    addToCart.url(),
-                                    { product_id: product.id },
-                                    {
+                        {cartItemId === null ? (
+                            <Button
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                    router.post(
+                                        addToCart.url(),
+                                        { product_id: product.id },
+                                        {
+                                            preserveScroll: true,
+                                            onSuccess: () => toast('Added to cart'),
+                                        },
+                                    )
+                                }
+                            >
+                                Add to Cart
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="destructive"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                    router.delete(removeFromCart(cartItemId).url, {
                                         preserveScroll: true,
-                                        onSuccess: () => toast('Added to cart'),
-                                    },
-                                )
-                            }
-                        >
-                            Add to Cart
-                        </Button>
+                                        onSuccess: () => toast('Removed from cart'),
+                                    })
+                                }
+                            >
+                                Remove from Cart
+                            </Button>
+                        )}
 
                         {product.description && (
                             <p className="text-sm leading-relaxed">{product.description}</p>

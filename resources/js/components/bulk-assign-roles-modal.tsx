@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { bulkAssignRoles } from '@/actions/App/Http/Controllers/UserController';
 import { Button } from '@/components/ui/button';
@@ -31,9 +31,11 @@ export function BulkAssignRolesModal({ open, onOpenChange, roles, selectedUserId
     const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
     const [processing, setProcessing] = useState(false);
 
-    useEffect(() => {
-        if (!open) setSelectedRoleId(null);
-    }, [open]);
+    function handleOpenChange(newOpen: boolean) {
+        if (!newOpen) setSelectedRoleId(null);
+
+        onOpenChange(newOpen);
+    }
 
     function handleAssign() {
         if (!selectedRoleId) return;
@@ -55,7 +57,7 @@ export function BulkAssignRolesModal({ open, onOpenChange, roles, selectedUserId
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent>
                 <DialogTitle>Assign Role</DialogTitle>
                 <DialogDescription>
@@ -78,7 +80,7 @@ export function BulkAssignRolesModal({ open, onOpenChange, roles, selectedUserId
                     </SelectContent>
                 </Select>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    <Button variant="outline" onClick={() => handleOpenChange(false)}>
                         Cancel
                     </Button>
                     <Button disabled={!selectedRoleId || processing} onClick={handleAssign}>

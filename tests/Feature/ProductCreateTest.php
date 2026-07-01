@@ -94,11 +94,11 @@ it('forbids users without create_product from storing', function () {
 });
 
 it('creates a physical product and redirects', function () {
-    actingAs($this->admin)
-        ->post('/admin/products', validProductPayload())
-        ->assertRedirect('/admin/products');
+    $response = actingAs($this->admin)
+        ->post('/admin/products', validProductPayload());
 
     $product = Product::first();
+    $response->assertRedirect(route('admin.products.show', $product));
     expect($product->name)->toBe('Test Widget');
     expect($product->sku)->toBe('TW-0001');
     expect($product->price)->toBe(2999);

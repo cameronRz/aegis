@@ -1,9 +1,11 @@
 <?php
 
 use App\Enum\MessageRole;
+use App\Enum\SettingKey;
 use App\Enum\Tier;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\AppSetting;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -172,4 +174,32 @@ test('ai message endpoint is rate limited to 30 requests per minute', function (
     $route = Route::getRoutes()->getByName('ai.messages.store');
 
     expect($route->middleware())->toContain('throttle:30,1');
+});
+
+// ── Feature flag (AiAssistantEnabled) ────────────────────────────────────────
+
+test('returns 503 when AI assistant is disabled for index', function () {
+    AppSetting::set(SettingKey::AiAssistantEnabled, false);
+
+    actingAs($this->clientUser)
+        ->get(route('ai.index'))
+        ->assertStatus(503);
+});
+
+test('returns 503 when AI assistant is disabled for new conversation', function () {
+    AppSetting::set(SettingKey::AiAssistantEnabled, false);
+
+    actingAs($this->clientUser)
+        ->post(route('ai.conversations.store'))
+        ->assertStatus(503);
+});
+
+test('returns 503 when AI assistant is disabled for message endpoint', function () {
+    AppSetting::set(SettingKey::AiAssistantEnabled, false);
+
+    $conversation = AiConversation::factory()->create(['user_id' => $this->clientUser->id]);
+
+    actingAs($this->clientUser)
+        ->post(route('ai.messages.store'), ['conversation_id' => $conversation->id, 'content' => 'hello'])
+        ->assertStatus(503);
 });

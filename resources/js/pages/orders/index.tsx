@@ -5,8 +5,8 @@ import { show as showOrder } from '@/actions/App/Http/Controllers/OrderControlle
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
-import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
+import { orderStatusConfig } from '@/lib/order-status';
 import { orders as ordersRoute } from '@/routes';
 import type { Order, PaginatedData } from '@/types';
 

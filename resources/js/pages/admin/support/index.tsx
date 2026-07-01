@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useMemo } from 'react';
+import { ClientDate } from '@/components/client-date';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ const columns = [
         header: 'Client',
         cell: ({ getValue }) => {
             const client = getValue();
+
             return client ? (
                 <span className="font-medium">{client.full_name}</span>
             ) : (
@@ -31,6 +33,7 @@ const columns = [
         header: 'Status',
         cell: ({ getValue }) => {
             const status = getValue();
+
             return (
                 <Badge variant={status === 'open' ? 'default' : 'outline'}>
                     {status === 'open' ? 'Open' : 'Closed'}
@@ -42,13 +45,15 @@ const columns = [
         header: 'Last Message',
         cell: ({ getValue }) => {
             const val = getValue();
-            return val ? new Date(val).toLocaleString() : '—';
+
+            return val ? <ClientDate iso={val} options={{ dateStyle: 'short', timeStyle: 'short' }} /> : '—';
         },
     }),
     columnHelper.accessor('unread_count', {
         header: 'Unread',
         cell: ({ getValue }) => {
             const count = getValue();
+
             return count > 0 ? (
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-medium text-primary-foreground tabular-nums">
                     {count}

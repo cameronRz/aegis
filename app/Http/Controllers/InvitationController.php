@@ -34,6 +34,9 @@ class InvitationController extends Controller
         ]);
     }
 
+    /**
+     * @throws RandomException
+     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([

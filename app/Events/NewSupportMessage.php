@@ -2,8 +2,10 @@
 
 namespace App\Events;
 
+use App\Enum\PermissionName;
+use App\Enum\Tier;
 use App\Models\SupportMessage;
-use Illuminate\Broadcasting\Channel;
+use App\Models\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -16,9 +18,27 @@ class NewSupportMessage implements ShouldBroadcast
 
     public function __construct(public readonly SupportMessage $message) {}
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): array
     {
-        return new PrivateChannel("conversation.{$this->message->conversation_id}");
+        $conversation = $this->message->conversation;
+        $senderIsClient = $conversation->user_id === $this->message->sender_id;
+
+        $channels = [new PrivateChannel("conversation.{$conversation->id}")];
+
+        if ($senderIsClient) {
+            $handlerIds = User::where(function ($query) {
+                $query->whereIn('tier', [Tier::Admin->value, Tier::SiteAdmin->value])
+                    ->orWhereHas('roles.permissions', fn ($q) => $q->where('name', PermissionName::HandleSupport->value));
+            })->pluck('id');
+
+            foreach ($handlerIds as $id) {
+                $channels[] = new PrivateChannel("App.Models.User.{$id}");
+            }
+        } else {
+            $channels[] = new PrivateChannel("App.Models.User.{$conversation->user_id}");
+        }
+
+        return $channels;
     }
 
     public function broadcastWith(): array

@@ -1,12 +1,12 @@
 import { Head, useForm } from '@inertiajs/react';
+import { ProductFormFields } from './product-form-fields';
+import type { ProductCategory, ProductFormData } from './product-form-fields';
 import { store as storeProduct } from '@/actions/App/Http/Controllers/ProductController';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { products as adminProductsRoute } from '@/routes/admin';
 
-import { ProductFormFields } from './product-form-fields';
-import type { ProductCategory, ProductFormData } from './product-form-fields';
 
 type Props = {
     categories: ProductCategory[];

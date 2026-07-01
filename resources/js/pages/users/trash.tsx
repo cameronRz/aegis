@@ -35,14 +35,13 @@ function formatDeletedAt(dateString: string): string {
 
 const columnHelper = createColumnHelper<User>();
 
-export default function UsersTrash({ users, filters }: Props) {
-    const [search, setSearch] = useDebouncedSearch(
-        filters.search,
-        usersTrashRoute.url(),
-    );
-    const [userToDelete, setUserToDelete] = useState<User | null>(null);
-    const [deleting, setDeleting] = useState(false);
+type TableProps = {
+    users: PaginatedData<User>;
+    onDelete: (user: User) => void;
+};
 
+// Extracted so TanStack Table v8 remounts cleanly via key change (React 19 prop-update incompatibility).
+function UsersTrashTable({ users, onDelete }: TableProps) {
     const columns = useMemo(
         () => [
             columnHelper.accessor('first_name', { header: 'First Name' }),
@@ -86,7 +85,7 @@ export default function UsersTrash({ users, filters }: Props) {
                             size="sm"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setUserToDelete(row.original);
+                                onDelete(row.original);
                             }}
                         >
                             Delete
@@ -95,7 +94,7 @@ export default function UsersTrash({ users, filters }: Props) {
                 ),
             }),
         ],
-        [],
+        [onDelete],
     );
 
     // eslint-disable-next-line react-hooks/incompatible-library
@@ -104,6 +103,28 @@ export default function UsersTrash({ users, filters }: Props) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
+
+    return (
+        <>
+            <DataTable table={table} emptyMessage="No deleted users." />
+            <DataTablePagination paginatedData={users} />
+        </>
+    );
+}
+
+export default function UsersTrash({ users, filters }: Props) {
+    const [search, setSearch] = useDebouncedSearch(
+        filters.search,
+        usersTrashRoute.url(),
+    );
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    /**
+     * TanStack Table v8 doesn't re-render when `data` changes via React 19 prop updates.
+     * Changing the key forces UsersTrashTable to remount with the new data.
+     */
+    const tableKey = users.data.map((u) => `${u.id}:${u.updated_at}`).join(',');
 
     function handleForceDelete() {
         if (!userToDelete) return;
@@ -132,9 +153,11 @@ export default function UsersTrash({ users, filters }: Props) {
                     />
                 </div>
 
-                <DataTable table={table} emptyMessage="No deleted users." />
-
-                <DataTablePagination paginatedData={users} />
+                <UsersTrashTable
+                    key={tableKey}
+                    users={users}
+                    onDelete={setUserToDelete}
+                />
             </div>
 
             <ConfirmDialog

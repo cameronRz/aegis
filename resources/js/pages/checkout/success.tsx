@@ -1,12 +1,12 @@
 import { usePoll } from '@inertiajs/react';
 import { Head, Link } from '@inertiajs/react';
-import { useEffect } from 'react';
 import { CheckCircle, Clock } from 'lucide-react';
+import { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
+import { orderStatusConfig } from '@/lib/order-status';
 import type { Order } from '@/types';
 
 type Props = {

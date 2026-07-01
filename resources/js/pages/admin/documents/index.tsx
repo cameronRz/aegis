@@ -5,7 +5,7 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { Loader2 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table';
@@ -58,6 +58,7 @@ function DocumentsTable({ documents, onDelete }: TableProps) {
                 header: 'Status',
                 cell: ({ row }) => {
                     const config = statusConfig[row.original.status];
+
                     return (
                         <Badge variant={config.variant} className="gap-1.5">
                             {config.spinning && (
@@ -133,7 +134,7 @@ export default function DocumentsIndex({ documents }: Props) {
 
     const tableKey = documents.data.map((d) => `${d.id}:${d.status}`).join(',');
 
-    function handleUpload(e: FormEvent<HTMLFormElement>) {
+    function handleUpload(e: SubmitEvent<HTMLFormElement>) {
         e.preventDefault();
         post(storeDocument.url(), {
             forceFormData: true,
@@ -146,6 +147,7 @@ export default function DocumentsIndex({ documents }: Props) {
 
     function handleDelete() {
         if (!documentToDelete) return;
+
         setDeleting(true);
         router.delete(destroyDocument(documentToDelete).url, {
             onFinish: () => {

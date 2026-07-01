@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
@@ -13,5 +14,15 @@ if (typeof window !== 'undefined') {
         wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
         forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
         enabledTransports: ['ws', 'wss'],
+    });
+
+    // Inertia v3 removed Axios, so Echo can't auto-inject the socket ID. Without this,
+    // toOthers() on the server has no socket to exclude and broadcasts back to the sender.
+    router.on('before', (event) => {
+        const socketId = window.Echo?.socketId();
+
+        if (socketId) {
+            event.detail.visit.headers['X-Socket-ID'] = socketId;
+        }
     });
 }

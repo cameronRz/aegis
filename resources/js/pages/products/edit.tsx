@@ -1,4 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
+import { ProductFormFields } from './product-form-fields';
+import type { ProductCategory, ProductFormData } from './product-form-fields';
 import { update as updateProduct } from '@/actions/App/Http/Controllers/ProductController';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +8,6 @@ import { Separator } from '@/components/ui/separator';
 import { products as adminProductsRoute } from '@/routes/admin';
 import type { Product } from '@/types';
 
-import { ProductFormFields } from './product-form-fields';
-import type { ProductCategory, ProductFormData } from './product-form-fields';
 
 type Props = {
     product: Product;

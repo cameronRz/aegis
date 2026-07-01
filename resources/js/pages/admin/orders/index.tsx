@@ -7,8 +7,8 @@ import { DataTablePagination } from '@/components/data-table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDebouncedSearch } from '@/hooks/use-debounced-search';
-import { orderStatusConfig } from '@/lib/order-status';
 import { formatCents } from '@/lib/money';
+import { orderStatusConfig } from '@/lib/order-status';
 import { orders as adminOrdersRoute } from '@/routes/admin';
 import type { Order, PaginatedData, User } from '@/types';
 

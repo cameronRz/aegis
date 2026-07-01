@@ -2,12 +2,13 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Check, Send } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { ClientDate } from '@/components/client-date';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { index as adminSupportIndex, show as showAdminConversation, close as closeConversation } from '@/routes/admin/support';
+import { index as adminSupportIndex, close as closeConversation } from '@/routes/admin/support';
 import { store as storeMessage } from '@/routes/support/messages';
 import type { Auth, SupportConversation, SupportMessage, User } from '@/types';
 
@@ -21,11 +22,6 @@ type Props = {
 };
 
 function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: boolean }) {
-    const time = new Date(message.created_at).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-
     return (
         <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
             <div className="max-w-[75%] space-y-1">
@@ -46,8 +42,7 @@ function MessageBubble({ message, isMine }: { message: SupportMessage; isMine: b
                         isMine ? 'justify-end' : 'justify-start',
                     )}
                 >
-                    {/* Server (UTC) and browser (local TZ) format this differently — mismatch is intentional */}
-                    <span suppressHydrationWarning>{time}</span>
+                    <ClientDate iso={message.created_at} options={{ hour: '2-digit', minute: '2-digit' }} />
                     {isMine && message.read_at && <Check className="h-3 w-3" />}
                 </div>
             </div>
@@ -69,6 +64,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     useEffect(() => {
         const el = scrollRef.current;
+
         if (el) el.scrollTop = el.scrollHeight;
     }, [messages.length]);
 
@@ -76,12 +72,16 @@ export default function AdminSupportShow({ conversation }: Props) {
         const channel = window.Echo.private(`conversation.${conversation.id}`);
 
         channel.listen('NewSupportMessage', (msg: SupportMessage) => {
-            setMessages((prev) => [...prev, msg]);
+            // StrictMode mounts effects twice, which can register two listeners on the same channel.
+            // Guard by ID so a message broadcast once can't appear twice.
+            setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
         });
 
         channel.listenForWhisper('typing', ({ name }: { name: string }) => {
             setTypingName(name);
+
             if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+
             typingTimerRef.current = setTimeout(() => setTypingName(null), 3000);
         });
 
@@ -92,6 +92,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     function sendWhisper() {
         if (whisperTimerRef.current) clearTimeout(whisperTimerRef.current);
+
         whisperTimerRef.current = setTimeout(() => {
             window.Echo.private(`conversation.${conversation.id}`).whisper('typing', {
                 name: auth.user.full_name,
@@ -101,6 +102,7 @@ export default function AdminSupportShow({ conversation }: Props) {
 
     function submit() {
         const trimmed = content.trim();
+
         if (!trimmed || sending) return;
 
         const optimistic: SupportMessage = {
@@ -138,8 +140,10 @@ export default function AdminSupportShow({ conversation }: Props) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             submit();
+
             return;
         }
+
         sendWhisper();
     }
 
