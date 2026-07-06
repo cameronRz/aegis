@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ClientDate } from '@/components/client-date';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
@@ -64,11 +64,21 @@ const columns = [
 ];
 
 export default function AdminSupportIndex({ conversations }: Props) {
+    // Inertia restores the history-cached page state on back navigation without re-fetching,
+    // so counts can be stale if the admin read a conversation then pressed back. Reload on
+    // mount to always show current counts.
+    useEffect(() => {
+        router.reload({ only: ['conversations', 'unreadSupportCount'] });
+    }, []);
+
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: conversations.data,
         columns: useMemo(() => columns, []),
         getCoreRowModel: getCoreRowModel(),
+        // Include unread_count in the row ID so React remounts cells when the count changes.
+        // TanStack Table v8 doesn't re-render cells on data prop updates under React 19.
+        getRowId: (row) => `${row.id}-${row.unread_count}`,
     });
 
     return (
