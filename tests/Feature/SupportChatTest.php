@@ -377,7 +377,7 @@ test('support message endpoint is rate limited to 60 requests per minute', funct
 
 // ── Real-time badge + broadcast channel tests ─────────────────────────────────
 
-test('admin visiting support queue marks all unread client messages as read', function () {
+test('index page shows per-conversation unread counts', function () {
     $conversation = SupportConversation::create([
         'user_id' => $this->client->id,
         'status' => ConversationStatus::Open,
@@ -393,21 +393,21 @@ test('admin visiting support queue marks all unread client messages as read', fu
     actingAs($this->admin)
         ->get(route('admin.support.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 0));
+        ->assertInertia(fn ($page) => $page
+            ->where('conversations.data.0.unread_count', 1)
+            ->where('unreadSupportCount', 1)  // global badge reflects actual unread count
+        );
 
-    expect(SupportMessage::whereNull('read_at')->count())->toBe(0);
+    // Visiting the index does not mark messages as read — only opening the conversation does
+    expect(SupportMessage::whereNull('read_at')->count())->toBe(1);
 });
 
-test('unread badge shows new messages that arrive after queue visit', function () {
+test('unread badge reflects messages that have not been read yet', function () {
     $conversation = SupportConversation::create([
         'user_id' => $this->client->id,
         'status' => ConversationStatus::Open,
     ]);
 
-    // Visit queue first (marks existing messages as read)
-    actingAs($this->admin)->get(route('admin.support.index'))->assertOk();
-
-    // New message arrives after the queue visit
     SupportMessage::create([
         'conversation_id' => $conversation->id,
         'sender_id' => $this->client->id,
@@ -415,7 +415,6 @@ test('unread badge shows new messages that arrive after queue visit', function (
         'read_at' => null,
     ]);
 
-    // Badge now reflects the new unread message
     actingAs($this->admin)
         ->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 1));
@@ -439,6 +438,28 @@ test('clicking a conversation clears its contribution to the badge', function ()
         ->get(route('admin.support.show', $conversation))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('unreadSupportCount', 0));
+});
+
+test('admin-sent messages are not counted as unread in per-conversation unread_count', function () {
+    $conversation = SupportConversation::create([
+        'user_id' => $this->client->id,
+        'status' => ConversationStatus::Open,
+    ]);
+
+    // Admin sends a reply — read_at is null because no one marks your own messages as read
+    SupportMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $this->admin->id,
+        'content' => 'Admin reply',
+        'read_at' => null,
+    ]);
+
+    actingAs($this->admin)
+        ->get(route('admin.support.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('conversations.data.0.unread_count', 0)
+        );
 });
 
 test('NewSupportMessage broadcasts on conversation and admin user channels when client sends', function () {
