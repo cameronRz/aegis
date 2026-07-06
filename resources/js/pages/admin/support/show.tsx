@@ -59,6 +59,7 @@ export default function AdminSupportShow({ conversation }: Props) {
     const [closeOpen, setCloseOpen] = useState(false);
     const [closing, setClosing] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const whisperTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,6 +68,10 @@ export default function AdminSupportShow({ conversation }: Props) {
 
         if (el) el.scrollTop = el.scrollHeight;
     }, [messages.length]);
+
+    useEffect(() => {
+        textareaRef.current?.focus();
+    }, []);
 
     useEffect(() => {
         const channel = window.Echo.private(`conversation.${conversation.id}`);
@@ -131,7 +136,11 @@ export default function AdminSupportShow({ conversation }: Props) {
             {
                 preserveScroll: true,
                 only: [],
-                onFinish: () => setSending(false),
+                onFinish: () => {
+                    setSending(false);
+                    // Defer focus so React re-renders first and removes `disabled` before focus.
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                },
             },
         );
     }
@@ -210,6 +219,7 @@ export default function AdminSupportShow({ conversation }: Props) {
                         )}
                         <div className="flex gap-2">
                             <Textarea
+                                ref={textareaRef}
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 onKeyDown={handleKeyDown}

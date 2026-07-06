@@ -52,6 +52,7 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
     const [sending, setSending] = useState(false);
     const [typingName, setTypingName] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const whisperTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -62,6 +63,10 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
 
         if (el) el.scrollTop = el.scrollHeight;
     }, [messages.length]);
+
+    useEffect(() => {
+        textareaRef.current?.focus();
+    }, []);
 
     useEffect(() => {
         const channel = window.Echo.private(`conversation.${conversation.id}`);
@@ -128,7 +133,11 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
             {
                 preserveScroll: true,
                 only: [],
-                onFinish: () => setSending(false),
+                onFinish: () => {
+                    setSending(false);
+                    // Defer focus so React re-renders first and removes `disabled` before focus.
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                },
             },
         );
     }
@@ -176,6 +185,7 @@ function ConversationView({ conversation }: { conversation: SupportConversation 
                     )}
                     <div className="flex gap-2">
                         <Textarea
+                            ref={textareaRef}
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             onKeyDown={handleKeyDown}
