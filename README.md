@@ -20,7 +20,7 @@ A B2B admin and client portal for small business owners. Admins manage products,
 ### 1. Clone and install dependencies
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/cameronRz/aegis
 cd aegis
 composer install
 ```
