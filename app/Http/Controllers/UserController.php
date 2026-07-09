@@ -25,6 +25,7 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $users = User::query()
+            ->with('roles')
             ->visibleTo(auth()->user())
             ->search($request->input('search'))
             ->paginate(15)

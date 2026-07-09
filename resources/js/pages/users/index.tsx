@@ -9,7 +9,7 @@ import { create as createUser, edit as editUser, show as showUser } from '@/acti
 import { BulkAssignRolesModal } from '@/components/bulk-assign-roles-modal';
 import { DataTable } from '@/components/data-table';
 import { DataTablePagination } from '@/components/data-table-pagination';
-import { TierBadge } from '@/components/tier-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -86,9 +86,23 @@ export default function UsersIndex({ users, filters, roles }: Props) {
             columnHelper.accessor('first_name', { header: 'First Name' }),
             columnHelper.accessor('last_name', { header: 'Last Name' }),
             columnHelper.accessor('email', { header: 'Email' }),
-            columnHelper.accessor('tier', {
-                header: 'Tier',
-                cell: ({ getValue }) => <TierBadge tier={getValue() as Tier} />,
+            columnHelper.accessor('roles', {
+                header: 'Roles',
+                cell: ({ getValue }) => {
+                    const roles = getValue();
+                    if (!roles?.length) {
+                        return <span className="text-muted-foreground">—</span>;
+                    }
+                    return (
+                        <div className="flex flex-wrap gap-1">
+                            {roles.map((role) => (
+                                <Badge key={role.id} variant="secondary">
+                                    {role.name}
+                                </Badge>
+                            ))}
+                        </div>
+                    );
+                },
             }),
             ...(auth.can.edit_user
                 ? [
