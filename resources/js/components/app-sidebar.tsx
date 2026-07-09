@@ -43,7 +43,7 @@ const footerNavItems: NavItem[] = [
     // },
 ];
 
-function ALL_NAV_ITEMS(cartItemCount: number, unreadSupportCount: number): NavItem[] {
+function GENERAL_NAV_ITEMS(cartItemCount: number): NavItem[] {
     return [
         {
             title: 'Dashboard',
@@ -88,6 +88,11 @@ function ALL_NAV_ITEMS(cartItemCount: number, unreadSupportCount: number): NavIt
             permission: 'use_support',
             featureFlag: 'supportChatEnabled',
         },
+    ];
+}
+
+function MANAGEMENT_NAV_ITEMS(unreadSupportCount: number): NavItem[] {
+    return [
         {
             title: 'Users',
             href: adminUsersRoute.url(),
@@ -107,7 +112,7 @@ function ALL_NAV_ITEMS(cartItemCount: number, unreadSupportCount: number): NavIt
             permission: 'view_products',
         },
         {
-            title: 'Sales',
+            title: 'Orders',
             href: adminOrdersRoute.url(),
             icon: ClipboardList,
             permission: 'admin',
@@ -154,11 +159,15 @@ export function AppSidebar() {
         features: Features;
     }>().props;
 
-    const mainNavItems = ALL_NAV_ITEMS(cartItemCount, unreadSupportCount).filter(
-        (item) =>
-            (!item.permission || auth.can[item.permission]) &&
-            (!item.featureFlag || features[item.featureFlag]),
-    );
+    const filterItems = (items: NavItem[]) =>
+        items.filter(
+            (item) =>
+                (!item.permission || auth.can[item.permission]) &&
+                (!item.featureFlag || features[item.featureFlag]),
+        );
+
+    const generalItems = filterItems(GENERAL_NAV_ITEMS(cartItemCount));
+    const managementItems = filterItems(MANAGEMENT_NAV_ITEMS(unreadSupportCount));
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -175,7 +184,8 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={generalItems} label="General" />
+                <NavMain items={managementItems} label="Management" />
             </SidebarContent>
 
             <SidebarFooter>
