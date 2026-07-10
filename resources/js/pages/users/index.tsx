@@ -90,16 +90,28 @@ export default function UsersIndex({ users, filters, roles }: Props) {
                 header: 'Roles',
                 cell: ({ getValue }) => {
                     const roles = getValue();
+
                     if (!roles?.length) {
                         return <span className="text-muted-foreground">—</span>;
                     }
+
                     return (
                         <div className="flex flex-wrap gap-1">
-                            {roles.map((role) => (
-                                <Badge key={role.id} variant="secondary">
-                                    {role.name}
-                                </Badge>
-                            ))}
+                            {roles.map((role) =>
+                                role.color ? (
+                                    <Badge
+                                        key={role.id}
+                                        variant="outline"
+                                        style={{ borderColor: role.color }}
+                                    >
+                                        {role.name}
+                                    </Badge>
+                                ) : (
+                                    <Badge key={role.id} variant="secondary">
+                                        {role.name}
+                                    </Badge>
+                                ),
+                            )}
                         </div>
                     );
                 },

@@ -14,6 +14,7 @@ export default function RolesCreate({ allPermissions }: Props) {
     const { data, setData, post, processing, errors } = useForm<RoleFormData>({
         name: '',
         description: '',
+        color: '',
         permissions: [],
     });
 

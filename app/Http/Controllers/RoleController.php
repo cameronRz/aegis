@@ -34,7 +34,7 @@ class RoleController extends Controller
 
     public function store(StoreRoleRequest $request): RedirectResponse
     {
-        $role = Role::create($request->only('name', 'description'));
+        $role = Role::create($request->only('name', 'description', 'color'));
         $role->permissions()->sync($request->validated('permissions', []));
 
         return redirect()->route('admin.roles.edit', $role);
@@ -52,7 +52,7 @@ class RoleController extends Controller
 
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
-        $role->update($request->only('name', 'description'));
+        $role->update($request->only('name', 'description', 'color'));
         $role->permissions()->sync($request->validated('permissions', []));
 
         return redirect()->route('admin.roles.edit', $role);

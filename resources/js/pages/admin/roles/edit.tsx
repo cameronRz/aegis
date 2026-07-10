@@ -15,6 +15,7 @@ export default function RolesEdit({ role, allPermissions }: Props) {
     const { data, setData, patch, processing, errors } = useForm<RoleFormData>({
         name: role.name,
         description: role.description ?? '',
+        color: role.color ?? '',
         permissions: role.permissions.map((p) => p.id),
     });
 

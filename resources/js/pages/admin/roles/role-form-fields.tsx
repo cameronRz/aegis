@@ -10,6 +10,7 @@ import type { Permission } from '@/types';
 export type RoleFormData = {
     name: string;
     description: string;
+    color: string;
     permissions: number[];
 };
 
@@ -78,6 +79,32 @@ export function RoleFormFields({ data, setData, errors, allPermissions }: Props)
                             autoComplete="off"
                         />
                         <InputError message={errors.description} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="color">Color</Label>
+                        <div className="flex items-center gap-3">
+                            <input
+                                id="color"
+                                type="color"
+                                value={data.color || '#6b7280'}
+                                onChange={(e) => setData('color', e.target.value)}
+                                className="h-9 w-12 cursor-pointer rounded-md border border-input bg-transparent p-1"
+                            />
+                            <span className="font-mono text-sm text-muted-foreground">
+                                {data.color || 'None'}
+                            </span>
+                            {data.color && (
+                                <button
+                                    type="button"
+                                    onClick={() => setData('color', '')}
+                                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                        <InputError message={errors.color} />
                     </div>
                 </CardContent>
             </Card>

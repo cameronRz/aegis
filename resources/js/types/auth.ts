@@ -15,6 +15,7 @@ export type Role = {
     id: number;
     name: string;
     description: string | null;
+    color: string | null;
     permissions?: Permission[];
     users_count?: number;
     created_at: string;
