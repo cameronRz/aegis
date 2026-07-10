@@ -21,6 +21,7 @@ class StoreRoleRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('roles')],
             'description' => ['nullable', 'string', 'max:1000'],
+            'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:permissions,id'],
         ];
