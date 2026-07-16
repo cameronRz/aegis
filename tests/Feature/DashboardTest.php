@@ -23,6 +23,14 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('unverified users are redirected from the dashboard to the verification notice', function () {
+    $user = User::factory()->unverified()->create();
+    $this->actingAs($user);
+
+    $response = $this->get(route('dashboard'));
+    $response->assertRedirect(route('verification.notice'));
+});
+
 test('admin sees admin dashboard component', function () {
     $admin = User::factory()->create();
     $admin->tier = Tier::Admin;

@@ -106,7 +106,8 @@ it('accepting a valid invitation creates a user and logs them in', function () {
     $user = User::where('email', 'newclient@example.com')->firstOrFail();
     expect($user->first_name)->toBe('Jane')
         ->and($user->last_name)->toBe('Smith')
-        ->and($user->tier)->toBe(Tier::User);
+        ->and($user->tier)->toBe(Tier::User)
+        ->and($user->email_verified_at)->not->toBeNull();
 
     $invitation->refresh();
     expect($invitation->accepted_at)->not->toBeNull();

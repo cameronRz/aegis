@@ -136,6 +136,9 @@ class InvitationController extends Controller
             'password' => Hash::make($request->input('password')),
         ]);
 
+        $user->email_verified_at = now();
+        $user->save();
+
         try {
             $customer = $stripe->createCustomer($user);
             $user->stripe_customer_id = $customer->id;

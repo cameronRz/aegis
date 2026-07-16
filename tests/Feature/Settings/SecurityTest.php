@@ -30,6 +30,15 @@ test('security page is displayed', function () {
         );
 });
 
+test('unverified users are redirected from the security page to the verification notice', function () {
+    $user = User::factory()->unverified()->create();
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('security.edit'))
+        ->assertRedirect(route('verification.notice'));
+});
+
 test('security page requires password confirmation when enabled', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
