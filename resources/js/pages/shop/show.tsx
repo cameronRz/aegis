@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { intervalLabels } from '@/lib/billing';
 import { formatCents } from '@/lib/money';
+import { currentPath } from '@/lib/utils';
 import { shop as shopRoute } from '@/routes';
 import type { BillingInterval, Product } from '@/types';
 
@@ -75,7 +76,7 @@ export default function ShopShow({ product, imageUrl, cartItemId }: Props) {
                                 onClick={() =>
                                     router.post(
                                         addToCart.url(),
-                                        { product_id: product.id },
+                                        { product_id: product.id, redirect_to: currentPath() },
                                         {
                                             preserveScroll: true,
                                             onSuccess: () => toast('Added to cart'),
@@ -91,6 +92,7 @@ export default function ShopShow({ product, imageUrl, cartItemId }: Props) {
                                 className="w-full sm:w-auto"
                                 onClick={() =>
                                     router.delete(removeFromCart(cartItemId).url, {
+                                        data: { redirect_to: currentPath() },
                                         preserveScroll: true,
                                         onSuccess: () => toast('Removed from cart'),
                                     })

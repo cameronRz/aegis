@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { intervalLabels } from '@/lib/billing';
 import { formatCents } from '@/lib/money';
+import { currentPath } from '@/lib/utils';
 import { shop as shopRoute } from '@/routes';
 import { show as showProduct } from '@/routes/shop';
 import type { BillingInterval, PaginatedData, Product } from '@/types';
@@ -138,7 +139,7 @@ export default function ShopIndex({ products, categories, filters, cartItems }: 
                                                     e.stopPropagation();
                                                     router.post(
                                                         addToCart.url(),
-                                                        { product_id: product.id },
+                                                        { product_id: product.id, redirect_to: currentPath() },
                                                         {
                                                             preserveScroll: true,
                                                             onSuccess: () => toast('Added to cart'),
@@ -156,6 +157,7 @@ export default function ShopIndex({ products, categories, filters, cartItems }: 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     router.delete(removeFromCart(cartItems[product.id]).url, {
+                                                        data: { redirect_to: currentPath() },
                                                         preserveScroll: true,
                                                         onSuccess: () => toast('Removed from cart'),
                                                     });
