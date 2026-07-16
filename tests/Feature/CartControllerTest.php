@@ -34,14 +34,36 @@ it('renders the cart page', function () {
         ->assertInertia(fn ($page) => $page->component('cart/index'));
 });
 
-it('adds a product to the cart', function () {
+it('adds a product to the cart and redirects to the cart page by default', function () {
     $product = Product::factory()->create();
 
     actingAs($this->user)
         ->post(route('cart.items.store'), ['product_id' => $product->id])
-        ->assertRedirect();
+        ->assertRedirect(route('cart'));
 
     expect(Cart::where('user_id', $this->user->id)->first()->items()->count())->toBe(1);
+});
+
+it('redirects back to the given redirect_to path after adding to cart', function () {
+    $product = Product::factory()->create();
+
+    actingAs($this->user)
+        ->post(route('cart.items.store'), [
+            'product_id' => $product->id,
+            'redirect_to' => '/shop?page=2&search=widget',
+        ])
+        ->assertRedirect('/shop?page=2&search=widget');
+});
+
+it('ignores an unsafe redirect_to and falls back to the cart page', function () {
+    $product = Product::factory()->create();
+
+    actingAs($this->user)
+        ->post(route('cart.items.store'), [
+            'product_id' => $product->id,
+            'redirect_to' => 'https://evil.example.com',
+        ])
+        ->assertRedirect(route('cart'));
 });
 
 it('returns an error for inactive products', function () {
@@ -58,7 +80,7 @@ it('updates a cart item quantity', function () {
 
     actingAs($this->user)
         ->patch(route('cart.items.update', $item), ['quantity' => 3])
-        ->assertRedirect();
+        ->assertRedirect(route('cart'));
 
     expect($item->fresh()->quantity)->toBe(3);
 });
@@ -78,8 +100,8 @@ it('removes a cart item', function () {
     $item = CartItem::factory()->create(['cart_id' => $cart->id]);
 
     actingAs($this->user)
-        ->delete(route('cart.items.destroy', $item))
-        ->assertRedirect();
+        ->delete(route('cart.items.destroy', $item), ['redirect_to' => '/shop?page=3'])
+        ->assertRedirect('/shop?page=3');
 
     expect(CartItem::find($item->id))->toBeNull();
 });
@@ -100,7 +122,7 @@ it('clears all cart items', function () {
 
     actingAs($this->user)
         ->delete(route('cart.clear'))
-        ->assertRedirect();
+        ->assertRedirect(route('cart'));
 
     expect($cart->items()->count())->toBe(0);
 });
